@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espace vendeur</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <header class="main-header"><div class="container header-inner">...</div></header>
+    <main class="container">
+        <h1><i class="fas fa-store"></i> Dashboard Vendeur</h1>
+        <section>
+            <h2>Mes produits</h2>
+            <div id="vendor-products" class="products-grid"></div>
+        </section>
+        <section>
+            <h2>Ajouter un produit</h2>
+            <form id="product-form" class="form-container">
+                <div class="form-group"><input type="text" id="name" class="form-control" placeholder="Nom" required></div>
+                <div class="form-group"><input type="number" id="price" class="form-control" placeholder="Prix" step="0.01" required></div>
+                <div class="form-group"><input type="number" id="servings" class="form-control" placeholder="Portions" required></div>
+                <div class="form-group">
+                    <select id="storage_type" class="form-control">
+                        <option value="fresh">Frais</option>
+                        <option value="frozen">Surgelé</option>
+                    </select>
+                </div>
+                <div class="form-group"><input type="number" id="dlc_days" class="form-control" placeholder="Jours de conservation" required></div>
+                <div class="form-group"><input type="file" id="image" class="form-control" accept="image/*"></div>
+                <button type="submit" class="btn btn-primary">Créer le produit</button>
+            </form>
+        </section>
+        <section>
+            <h2>Commandes reçues</h2>
+            <div id="vendor-orders"></div>
+        </section>
+    </main>
+    <script type="module" src="/assets/js/auth.js"></script>
+    <script type="module" src="/assets/js/vendor.js"></script>
+</body>
+</html>

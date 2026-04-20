@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon panier</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <header class="main-header"><div class="container header-inner">...</div></header>
+    <main class="container">
+        <h1>Panier</h1>
+        <div id="cart-items"></div>
+        <div id="cart-total" class="cart-total"></div>
+        <button id="checkout-btn" class="btn btn-primary"><i class="fas fa-credit-card"></i> Passer commande</button>
+        <button id="clear-cart-btn" class="btn btn-danger">Vider le panier</button>
+    </main>
+    <script type="module">
+        import { getCart, addToCart, removeFromCart, clearCart, createOrder } from '/assets/js/api.js';
+        async function loadCart() {
+            try {
+                const items = await getCart();
+                const container = document.getElementById('cart-items');
+                if (items.length === 0) {
+                    container.innerHTML = '<p>Panier vide</p>';
+                    document.getElementById('cart-total').innerHTML = '';
+                    return;
+                }
+                let total = 0;
+                container.innerHTML = items.map(item => {
+                    total += item.quantity * item.price;
+                    return `
+                        <div class="cart-item">
+                            <div><strong>${item.name}</strong> - ${item.quantity} x ${item.price} €</div>
+                            <button class="btn btn-outline remove-item" data-id="${item.id}"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `;
+                }).join('');
+                document.getElementById('cart-total').innerHTML = `Total: ${total.toFixed(2)} €`;
+                document.querySelectorAll('.remove-item').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        await removeFromCart(btn.dataset.id);
+                        loadCart();
+                    });
+                });
+            } catch(err) { alert(err.message); }
+        }
+        document.getElementById('clear-cart-btn')?.addEventListener('click', async () => {
+            await clearCart(); loadCart();
+        });
+        document.getElementById('checkout-btn')?.addEventListener('click', async () => {
+            const address = prompt('Adresse de livraison');
+            const time = prompt('Date/heure (YYYY-MM-DD HH:MM:SS)');
+            if (address && time) {
+                await createOrder(address, time);
+                alert('Commande passée !');
+                window.location.href = '/index.html';
+            }
+        });
+        loadCart();
+    </script>
+</body>
+</html>

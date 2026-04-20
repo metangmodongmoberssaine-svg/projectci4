@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Détail du plat</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <header class="main-header">
+        <div class="container header-inner">
+            <a href="/index.html" class="logo"><i class="fas fa-utensils"></i> PlatPrêt</a>
+            <div class="nav-links">
+                <a href="/index.html">Accueil</a>
+                <a href="/cart.html"><i class="fas fa-shopping-cart"></i> Panier</a>
+                <span id="auth-links">
+                    <a href="/login.html">Connexion</a>
+                    <a href="/register.html">Inscription</a>
+                </span>
+                <button id="logout-btn" style="display:none;"><i class="fas fa-sign-out-alt"></i> Déconnexion</button>
+            </div>
+        </div>
+    </header>
+    <main class="container">
+        <div id="product-detail"></div>
+    </main>
+    <script type="module" src="/assets/js/auth.js"></script>
+    <script type="module" src="/assets/js/products.js"></script>
+</body>
+</html>
