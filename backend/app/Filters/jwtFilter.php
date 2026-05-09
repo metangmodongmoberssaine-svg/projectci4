@@ -1,43 +1,48 @@
-<?php namespace App\Filters;
+<?php
 
+namespace App\Filters;
+
+use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
-use CodeIgniter\Filters\FilterInterface;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Config\Services;
+use Exception;
 
 class JwtFilter implements FilterInterface
 {
     public function before(RequestInterface $request, $arguments = null)
     {
-        $header = $request->getHeaderLine('Authorization');
+        $authHeader = $request->getServer('HTTP_AUTHORIZATION');
 
-        if (!$header || !str_starts_with($header, 'Bearer ')) {
-            return service('response')->setStatusCode(401)->setJSON([
-                'status' => false,
-                'message' => 'Token manquant.'
-            ]);
+        if (!$authHeader) {
+            return Services::response()
+                ->setStatusCode(401)
+                ->setJSON(['status' => false, 'message' => 'Accès refusé. Token manquant.']);
         }
-
-        $token = substr($header, 7);
 
         try {
-            $decoded = JWT::decode($token, new Key(getenv('JWT_SECRET'), 'HS256'));
+            // Extraction du token Bearer
+            $token = str_replace('Bearer ', '', $authHeader);
+            $key = getenv('JWT_SECRET');
+            
+            // Décodage
+            $decoded = JWT::decode($token, new Key($key, 'HS256'));
 
-            //  Injection dans la requête
-            $request->userId   = (int) $decoded->uid;
-            $request->userRole = (string) $decoded->role;
+            // On injecte les infos du user dans la requête pour le controller
+            $request->user = $decoded;
 
-        } catch (\Exception $e) {
-            return service('response')->setStatusCode(401)->setJSON([
-                'status' => false,
-                'message' => 'Token invalide ou expiré.'
-            ]);
+        } catch (Exception $e) {
+            return Services::response()
+                ->setStatusCode(401)
+                ->setJSON([
+                    'status' => false, 
+                    'message' => 'Session expirée ou Token invalide.',
+                    'error' => $e->getMessage()
+                ]);
         }
     }
 
-    public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
-    {
-        // rien ici
-    }
+    public function after(RequestInterface $request, ResponseInterface $response, $arguments = null) {}
 }
