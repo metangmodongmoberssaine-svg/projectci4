@@ -28,7 +28,7 @@ class Filters extends BaseFilters
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
-        'jwt'           => \App\Filters\JwtFilter::class, // Ton alias pour le "Sanctum" version CI4
+        'jwt'           => \App\Filters\JwtFilter::class,
     ];
 
     /**
@@ -36,10 +36,10 @@ class Filters extends BaseFilters
      */
     public array $globals = [
         'before' => [
+            'cors', // INDISPENSABLE : doit être le premier pour autoriser React
             // 'honeypot',
             // 'csrf',
             // 'invalidchars',
-            'cors', // Il est conseillé d'activer CORS globalement pour tes APIs
         ],
         'after' => [
             'toolbar',
@@ -52,8 +52,6 @@ class Filters extends BaseFilters
      * Appliquer un filtre sur des patterns d'URL spécifiques.
      */
     public array $filters = [
-        // On demande le JWT pour toutes les routes 'api/user/...' 
-        // ou des actions spécifiques comme le logout.
         'jwt' => [
             'before' => [
                 'api/auth/logout',
