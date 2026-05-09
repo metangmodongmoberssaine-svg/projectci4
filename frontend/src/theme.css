@@ -1,0 +1,39 @@
+/* src/theme.css */
+
+:root {
+    /* 🎨 Couleurs Principales (AfricaFood Identity) */
+    --af-primary: #E67E22;       /* Orange terre cuite / Épices */
+    --af-primary-dark: #D35400;
+    --af-secondary: #27AE60;     /* Vert forêt / Fraîcheur */
+    --af-secondary-dark: #1E8449;
+    
+    /* 🍎 Couleurs d'Accentuation */
+    --af-accent: #C0392B;        /* Rouge piment */
+    --af-yellow: #F1C40F;        /* Jaune Safran */
+
+    /* ⚪ Nuances de Gris & Neutres */
+    --af-black: #2C3E50;
+    --af-white: #FFFFFF;
+    --af-light: #F8F9FA;
+    --af-gray: #95A5A6;
+    
+    /* ⚠️ États */
+    --af-success: #2ECC71;
+    --af-danger: #E74C3C;
+    --af-warning: #F39C12;
+    --af-info: #3498DB;
+
+    /* 📏 Espacements & Bordures */
+    --af-border-radius: 8px;
+    --af-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Optionnel : Surcharge de quelques classes Bootstrap pour utiliser nos couleurs */
+.btn-primary {
+    background-color: var(--af-primary) ! important;
+    border-color: var(--af-primary) ! important;
+}
+
+.text-primary {
+    color: var(--af-primary) ! important;
+}

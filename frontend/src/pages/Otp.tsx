@@ -1,13 +1,12 @@
 import React from 'react'
 import Header from '../components/Header'
+import OtpContent from '../contents/OtpContent'
 import Footer from '../components/Footer'
-import OurFoodsContent from '../contents/OurFoodsContent'
-
-export default function OurFood() {
+export default function Otp() {
   return (
     <div>
       <Header />
-      <OurFoodsContent />
+      <OtpContent />
       <Footer />
     </div>
   )

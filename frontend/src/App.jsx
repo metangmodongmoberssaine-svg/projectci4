@@ -4,6 +4,7 @@ import Register from './pages/Register'
 import OurFood from './pages/OurFood'
 import Contact from './pages/Contact'
 import About from './pages/About' 
+import Otp from './pages/Otp'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import './App.css'
 
@@ -18,6 +19,7 @@ function App() {
         <Route path='/ourfood' element={<OurFood />} />
         <Route path='/contact' element={<Contact />} />
         <Route path='/about' element={<About />} />
+        <Route path='/otp' element={<Otp />} />
       </Routes>
     </Router>
   )
