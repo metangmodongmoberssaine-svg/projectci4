@@ -18,14 +18,25 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function($routes) 
      * Authentification (Public & Privé)
      */
     $routes->group('auth', function($routes) {
-        // Routes publiques
         $routes->post('register', 'AuthController::register');
         $routes->post('verify-otp', 'AuthController::verifyOtp');
         $routes->post('login', 'AuthController::login');
-        
-        // Route protégée (Nécessite le token Bearer dans le header)
         $routes->post('logout', 'AuthController::logout', ['filter' => 'jwt']);
     });
 
-   
+    /**
+     * Gestion des Catégories
+     */
+    $routes->group('categories', function($routes) {
+        // Routes publiques (Consultation)
+        $routes->get('/', 'CategorieController::index');
+        $routes->get('(:num)', 'CategorieController::show/$1');
+        
+        // Routes protégées (Administration)
+        // Nécessite le Header "Authorization: Bearer <votre_token>"
+        $routes->post('/', 'CategorieController::create', ['filter' => 'jwt']);
+        $routes->put('(:num)', 'CategorieController::update/$1', ['filter' => 'jwt']);
+        $routes->delete('(:num)', 'CategorieController::delete/$1', ['filter' => 'jwt']);
+    });
+
 });
