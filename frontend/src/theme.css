@@ -2,38 +2,69 @@
 
 :root {
     /* 🎨 Couleurs Principales (AfricaFood Identity) */
-    --af-primary: #E67E22;       /* Orange terre cuite / Épices */
-    --af-primary-dark: #D35400;
-    --af-secondary: #27AE60;     /* Vert forêt / Fraîcheur */
-    --af-secondary-dark: #1E8449;
+    --af-orange: #E67E22;       /* Orange (Épices / Chaleur) */
+    --af-orange-dark: #D35400;
     
-    /* 🍎 Couleurs d'Accentuation */
-    --af-accent: #C0392B;        /* Rouge piment */
-    --af-yellow: #F1C40F;        /* Jaune Safran */
+    --af-green: #27AE60;        /* Vert (Nature / Produits frais) */
+    --af-green-dark: #1E8449;
+    
+    --af-blue: #3498DB;         /* Bleu (Confiance / Livraison) */
+    --af-blue-dark: #2980B9;
 
-    /* ⚪ Nuances de Gris & Neutres */
-    --af-black: #2C3E50;
+    --af-red: #C0392B;          /* Rouge (Piment / Passion) */
+    --af-red-dark: #A93226;
+
+    --af-black: #2C3E50;        /* Noir (Texte / Élégance) */
+    --af-black-deep: #1A252F;
+
+    /* ⚪ Neutres */
     --af-white: #FFFFFF;
-    --af-light: #F8F9FA;
-    --af-gray: #95A5A6;
+    --af-light: #F4F7F6;
+    --af-gray: #7F8C8D;
     
-    /* ⚠️ États */
-    --af-success: #2ECC71;
-    --af-danger: #E74C3C;
+    /* 🏗️ Mapping Fonctionnel (Alias) */
+    --af-primary: var(--af-orange);
+    --af-secondary: var(--af-green);
+    --af-accent: var(--af-blue);
+    
+    /* ⚠️ États de l'interface */
+    --af-success: var(--af-green);
+    --af-danger: var(--af-red);
     --af-warning: #F39C12;
-    --af-info: #3498DB;
+    --af-info: var(--af-blue);
 
-    /* 📏 Espacements & Bordures */
-    --af-border-radius: 8px;
-    --af-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    /* 📏 Système de design */
+    --af-border-radius: 12px;   /* Un peu plus arrondi pour un look moderne */
+    --af-shadow: 0 4px 12px rgba(44, 62, 80, 0.12);
 }
 
-/* Optionnel : Surcharge de quelques classes Bootstrap pour utiliser nos couleurs */
+/* --- Surcharges Utilitaires --- */
+
+/* Bouton Primaire (Orange) */
 .btn-primary {
-    background-color: var(--af-primary) ! important;
-    border-color: var(--af-primary) ! important;
+    background-color: var(--af-primary) !important;
+    border-color: var(--af-primary) !important;
+    border-radius: var(--af-border-radius) !important;
+    transition: all 0.3s ease;
 }
 
-.text-primary {
-    color: var(--af-primary) ! important;
+.btn-primary:hover {
+    background-color: var(--af-orange-dark) !important;
+    transform: translateY(-1px);
 }
+
+/* Bouton Secondaire (Vert) */
+.btn-secondary {
+    background-color: var(--af-secondary) !important;
+    border-color: var(--af-secondary) !important;
+}
+
+/* Couleurs de texte personnalisées */
+.text-af-orange { color: var(--af-orange) !important; }
+.text-af-green  { color: var(--af-green) !important; }
+.text-af-blue   { color: var(--af-blue) !important; }
+.text-af-red    { color: var(--af-red) !important; }
+.text-af-black  { color: var(--af-black) !important; }
+
+/* Arrière-plans */
+.bg-af-light { background-color: var(--af-light) !important; }
