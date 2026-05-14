@@ -23,7 +23,7 @@ const api = axios.create({
 });
 
 /**
- * 🛡️ INTERCEPTEUR DE REQUÊTE
+ * INTERCEPTEUR DE REQUÊTE
  * Ajoute automatiquement le Token JWT dans le header "Authorization" 
  */
 api.interceptors.request.use(

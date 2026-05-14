@@ -15,7 +15,7 @@ class CreateUsersTable extends Migration
             'telephone'      => ['type'=>'VARCHAR','constraint'=>20],
             'email'          => ['type'=>'VARCHAR','constraint'=>150],
             'password'       => ['type'=>'VARCHAR','constraint'=>255],
-            'role'           => ['type'=>'ENUM','constraint'=>['client','admin','livreur','cuisinier'],'default'=>'client'],
+                'role'           => ['type'=>'ENUM','constraint'=>['client','admin','livreur','cuisinier'],'default'=>'client'],
             'ville'          => ['type'=>'VARCHAR','constraint'=>100,'null'=>true],
             'photo_profil'   => ['type'=>'VARCHAR','constraint'=>255,'null'=>true],
             'otp_code'       => ['type'=>'VARCHAR','constraint'=>10,'null'=>true],
