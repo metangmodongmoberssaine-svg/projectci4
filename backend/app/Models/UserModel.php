@@ -1,44 +1,58 @@
-<?php namespace App\Models;
+<?php
+
+namespace App\Models;
+
 use CodeIgniter\Model;
- 
+
 class UserModel extends Model
 {
     protected $table         = 'users';
     protected $primaryKey    = 'id';
     protected $useTimestamps = true;
+    protected $createdField  = 'created_at';
+    protected $updatedField  = 'updated_at';
+
     protected $allowedFields = [
-        'nom','prenom','telephone','email','password',
-        'role','ville','photo_profil','otp_code',
-        'otp_expires_at','is_verified','is_actif'
+        'nom', 
+        'prenom', 
+        'telephone', 
+        'email', 
+        'password', 
+        'role', 
+        'ville', 
+        'photo_profil', 
+        'otp_code', 
+        'otp_expires_at', 
+        'is_verified', 
+        'is_actif'
     ];
- 
-    // Hachage automatique du mot de passe avant insertion
+
+    // Callbacks pour le hachage automatique
     protected $beforeInsert = ['hashPassword'];
     protected $beforeUpdate = ['hashPassword'];
- 
+
     protected function hashPassword(array $data): array
     {
-        if (isset($data['data']['password'])) {
+        if (isset($data['data']['password']) && !empty($data['data']['password'])) {
             $data['data']['password'] = password_hash(
                 $data['data']['password'], PASSWORD_BCRYPT
             );
         }
         return $data;
     }
- 
-    // Trouver un user par email
+
+    // --- Requêtes personnalisées ---
+
     public function findByEmail(string $email): ?array
     {
         return $this->where('email', $email)->first();
     }
- 
-    // Trouver un user par téléphone
+
     public function findByPhone(string $phone): ?array
     {
         return $this->where('telephone', $phone)->first();
     }
- 
-    // Mettre à jour l'OTP d'un user
+
     public function setOtp(int $userId, string $code, string $expiresAt): bool
     {
         return $this->update($userId, [
@@ -46,8 +60,7 @@ class UserModel extends Model
             'otp_expires_at' => $expiresAt,
         ]);
     }
- 
-    // Marquer le compte comme vérifié et effacer l'OTP
+
     public function markVerified(int $userId): bool
     {
         return $this->update($userId, [
@@ -56,12 +69,14 @@ class UserModel extends Model
             'otp_expires_at' => null,
         ]);
     }
- 
+
+    // --- Validation ---
     protected $validationRules = [
-        'email'     => 'required|valid_email|is_unique[users.email]',
-        'telephone' => 'required|is_unique[users.telephone]',
+        'email'     => 'required|valid_email|is_unique[users.email,id,{id}]',
+        'telephone' => 'required|is_unique[users.telephone,id,{id}]',
         'password'  => 'required|min_length[8]',
         'nom'       => 'required|min_length[2]',
         'prenom'    => 'required|min_length[2]',
+        'ville'     => 'permit_empty|min_length[2]' // La ville peut être vide au départ
     ];
 }

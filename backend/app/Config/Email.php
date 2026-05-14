@@ -6,9 +6,9 @@ use CodeIgniter\Config\BaseConfig;
 
 class Email extends BaseConfig
 {
-    public string $fromEmail  = '';
-    public string $fromName   = '';
-    public string $recipients = '';
+    public string $fromEmail;
+    public string $fromName;
+    public string $recipients;
 
     /**
      * The "user agent"
@@ -18,7 +18,7 @@ class Email extends BaseConfig
     /**
      * The mail sending protocol: mail, sendmail, smtp
      */
-    public string $protocol = 'mail';
+    public string $protocol;
 
     /**
      * The server path to Sendmail.
@@ -28,7 +28,7 @@ class Email extends BaseConfig
     /**
      * SMTP Server Hostname
      */
-    public string $SMTPHost = '';
+    public string $SMTPHost;
 
     /**
      * Which SMTP authentication method to use: login, plain
@@ -38,22 +38,22 @@ class Email extends BaseConfig
     /**
      * SMTP Username
      */
-    public string $SMTPUser = '';
+    public string $SMTPUser;
 
     /**
      * SMTP Password
      */
-    public string $SMTPPass = '';
+    public string $SMTPPass;
 
     /**
      * SMTP Port
      */
-    public int $SMTPPort = 25;
+    public int $SMTPPort;
 
     /**
      * SMTP Timeout (in seconds)
      */
-    public int $SMTPTimeout = 5;
+    public int $SMTPTimeout = 60;
 
     /**
      * Enable persistent SMTP connections
@@ -62,12 +62,8 @@ class Email extends BaseConfig
 
     /**
      * SMTP Encryption.
-     *
-     * @var string '', 'tls' or 'ssl'. 'tls' will issue a STARTTLS command
-     *             to the server. 'ssl' means implicit SSL. Connection on port
-     *             465 should set this to ''.
      */
-    public string $SMTPCrypto = 'tls';
+    public string $SMTPCrypto;
 
     /**
      * Enable word-wrap
@@ -82,7 +78,7 @@ class Email extends BaseConfig
     /**
      * Type of mail, either 'text' or 'html'
      */
-    public string $mailType = 'text';
+    public string $mailType;
 
     /**
      * Character set (utf-8, iso-8859-1, etc.)
@@ -123,4 +119,20 @@ class Email extends BaseConfig
      * Enable notify message from server
      */
     public bool $DSN = false;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        // Récupération des données depuis le fichier .env
+        $this->fromEmail  = env('email.fromEmail', 'kakabichristian@gmail.com');
+        $this->fromName   = env('email.fromName', 'AfricaFood');
+        $this->protocol   = env('email.protocol', 'smtp');
+        $this->SMTPHost   = env('email.SMTPHost', 'smtp.gmail.com');
+        $this->SMTPUser   = env('email.SMTPUser', 'kakabichristian@gmail.com');
+        $this->SMTPPass   = env('email.SMTPPass', '');
+        $this->SMTPPort   = (int) env('email.SMTPPort', 587);
+        $this->SMTPCrypto = env('email.SMTPCrypto', 'tls');
+        $this->mailType   = env('email.mailType', 'html');
+    }
 }
