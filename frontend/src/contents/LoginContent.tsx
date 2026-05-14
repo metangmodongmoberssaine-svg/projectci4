@@ -8,7 +8,6 @@ export default function LoginContent() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [loggedIn, setLoggedIn] = useState(false);
 
     const [credentials, setCredentials] = useState({
         email: '',
@@ -16,7 +15,6 @@ export default function LoginContent() {
     });
 
     useEffect(() => {
-        // Animation plus douce pour la connexion
         AOS.init({ duration: 1000 });
     }, []);
 
@@ -31,32 +29,32 @@ export default function LoginContent() {
 
         try {
             const response = await AuthService.login(credentials);
-            if (response.status) {
-                setLoggedIn(true);
-                // On ne redirige pas encore vers un dashboard car il n'existe pas
-                console.log("Token stocké :", localStorage.getItem('auth_token'));
+            
+            // Correction TypeScript : Vérification stricte de la présence des données
+            if (response.status && response.token && response.user) {
+                
+                // Stockage sécurisé
+                localStorage.setItem('auth_token', response.token);
+                localStorage.setItem('user_data', JSON.stringify(response.user));
+
+                // Logique de redirection selon le rôle définit dans ta migration
+                const userRole = response.user.role;
+
+                if (userRole === 'admin') {
+                    navigate('/admin');
+                } else {
+                    navigate('/'); // Redirection client vers l'accueil
+                }
+            } else {
+                setError("La réponse du serveur est incomplète.");
             }
         } catch (err: any) {
+            // Gestion de l'erreur selon le format de ton intercepteur API
             setError(err.response?.data?.message || "Identifiants incorrects ou compte non vérifié.");
         } finally {
             setLoading(false);
         }
     };
-
-    if (loggedIn) {
-        return (
-            <div className="container py-5 text-center" data-aos="zoom-in">
-                <div className="alert alert-success p-5 shadow">
-                    <h2 className="mb-3">🎉 Connexion réussie !</h2>
-                    <p>Bravo, vous êtes maintenant connecté à <strong>AfricaFood</strong>.</p>
-                    <p className="text-muted small">Le dashboard sera bientôt disponible ici.</p>
-                    <button className="btn btn-outline-success mt-3" onClick={() => setLoggedIn(false)}>
-                        Retour au login
-                    </button>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="container py-5">
@@ -66,18 +64,23 @@ export default function LoginContent() {
                         <div className="card-body p-5">
                             <div className="text-center mb-4">
                                 <h2 style={{ color: 'var(--af-primary)', fontWeight: 'bold' }}>Connexion</h2>
-                                <p className="text-muted">Heureux de vous revoir !</p>
+                                <p className="text-muted small">Accédez à votre espace AfricaFood</p>
                             </div>
 
-                            {error && <div className="alert alert-danger mb-4" data-aos="shake">{error}</div>}
+                            {error && (
+                                <div className="alert alert-danger mb-4 animate__animated animate__shakeX" style={{ fontSize: '0.9rem' }}>
+                                    {error}
+                                </div>
+                            )}
 
                             <form onSubmit={handleSubmit}>
                                 <div className="mb-3">
-                                    <label className="form-label">Email</label>
+                                    <label className="form-label fw-bold small">Email</label>
                                     <input 
                                         type="email" 
                                         name="email" 
-                                        className="form-control" 
+                                        className="form-control border-0 px-3" 
+                                        style={{ backgroundColor: 'var(--af-light)', paddingTop: '12px', paddingBottom: '12px' }}
                                         onChange={handleChange} 
                                         required 
                                         placeholder="votre@email.com"
@@ -85,11 +88,12 @@ export default function LoginContent() {
                                 </div>
 
                                 <div className="mb-4">
-                                    <label className="form-label">Mot de passe</label>
+                                    <label className="form-label fw-bold small">Mot de passe</label>
                                     <input 
                                         type="password" 
                                         name="password" 
-                                        className="form-control" 
+                                        className="form-control border-0 px-3" 
+                                        style={{ backgroundColor: 'var(--af-light)', paddingTop: '12px', paddingBottom: '12px' }}
                                         onChange={handleChange} 
                                         required 
                                         placeholder="********"
@@ -98,23 +102,29 @@ export default function LoginContent() {
 
                                 <button 
                                     type="submit" 
-                                    className="btn w-100 py-2 mb-3" 
+                                    className="btn w-100 py-2 mb-3 d-flex align-items-center justify-content-center gap-2" 
                                     disabled={loading}
                                     style={{ 
                                         backgroundColor: 'var(--af-primary)', 
                                         color: 'white',
                                         fontWeight: 'bold',
-                                        borderRadius: 'var(--af-border-radius)'
+                                        borderRadius: 'var(--af-border-radius)',
+                                        transition: '0.3s'
                                     }}
                                 >
-                                    {loading ? 'Connexion...' : 'Se connecter'}
+                                    {loading ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm" role="status"></span>
+                                            <span>Chargement...</span>
+                                        </>
+                                    ) : 'Se connecter'}
                                 </button>
                             </form>
 
                             <div className="text-center mt-4">
-                                <p className="mb-0 text-muted">
+                                <p className="mb-0 text-muted small">
                                     Pas encore de compte ?{' '}
-                                    <Link to="/register" style={{ color: 'var(--af-secondary)', fontWeight: '600', textDecoration: 'none' }}>
+                                    <Link to="/register" style={{ color: 'var(--af-orange)', fontWeight: '600', textDecoration: 'none' }}>
                                         Créer un compte
                                     </Link>
                                 </p>
