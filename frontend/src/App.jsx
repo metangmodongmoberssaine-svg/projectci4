@@ -10,6 +10,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Repas from './pages/admin/Repas/Repas'
 import './App.css'
 import CategoriesContent from './pages/admin/categories/Categories'
+import Promotion from './pages/admin/Promotions/Promotion'
 
 function App() {
 
@@ -27,7 +28,7 @@ function App() {
         <Route path="/admin/*" element={<AdminDashboard />}>
             <Route path="categories" element={<CategoriesContent />} />
             <Route path="repas" element={<Repas />} />
-        
+            <Route path="promotions" element={<Promotion />} />
         </Route>
 
       </Routes>

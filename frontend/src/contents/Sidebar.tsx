@@ -6,7 +6,8 @@ import {
   MdMenu,
   MdDashboard,
   MdCategory,
-  MdFastfood 
+  MdFastfood, 
+  MdLocalOffer
 } from "react-icons/md";
 import AuthService from "../services/AuthService";
 
@@ -128,6 +129,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
             <NavLink to="/admin/repas" style={navLinkStyle} className="nav-link-custom" data-label="Repas">
               <MdFastfood size={22} className={isCollapsed ? "" : "me-3"} />
               {!isCollapsed && <span className="fw-bold">Repas</span>}
+            </NavLink>
+          </li>
+
+          <li className="nav-item">
+            <NavLink to="/admin/promotions" style={navLinkStyle} className="nav-link-custom" data-label="Promotions">
+              <MdLocalOffer size={22} className={isCollapsed ? "" : "me-3"} />
+              {!isCollapsed && <span className="fw-bold">Promotions</span>}
             </NavLink>
           </li>
 

@@ -61,4 +61,18 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function($routes) 
         $routes->patch('(:num)/status', 'RepasController::toggleStatus', ['filter' => 'jwt']); // Basculer dispo/indispo
     });
 
+    /**
+     * Gestion des Promotions (Événementielles / Sans Code)
+     */
+    $routes->group('promotions', function($routes) {
+        // Route publique ou admin (Consultation avec filtres : ?id_categorie=X ou ?id_repas=Y ou ?is_actif=1)
+        $routes->get('/', 'PromotionController::index');
+        
+        // Routes protégées (Administration des offres)
+        $routes->post('/', 'PromotionController::store', ['filter' => 'jwt']);
+        $routes->put('(:num)', 'PromotionController::update/$1', ['filter' => 'jwt']);
+        $routes->delete('(:num)', 'PromotionController::delete/$1', ['filter' => 'jwt']);
+        $routes->patch('(:num)/toggle', 'PromotionController::toggle/$1', ['filter' => 'jwt']); // Activer/Désactiver l'événement
+    });
+
 });
