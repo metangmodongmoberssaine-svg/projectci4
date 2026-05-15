@@ -1,47 +1,68 @@
 <?php namespace App\Models;
+
 use CodeIgniter\Model;
- 
+
 class NotificationModel extends Model
 {
     protected $table         = 'notifications';
     protected $primaryKey    = 'id';
     protected $useTimestamps = true;
     protected $allowedFields = [
-        'id_user','titre','message','type','is_read','is_broadcast'
+        'id_user', 'titre', 'message', 'type', 'is_read', 'is_broadcast'
     ];
- 
-    // Notifications d'un user (non lues en premier)
+
+    // Récupérer les notifs (Broadcast + Spécifiques à l'user)
     public function getByUser(int $userId): array
     {
-        return $this->where('id_user', $userId)
-            ->orWhere('is_broadcast', 1)
-            ->orderBy('is_read','ASC')
-            ->orderBy('created_at','DESC')
+        return $this->groupStart()
+                ->where('id_user', $userId)
+                ->orWhere('is_broadcast', 1)
+            ->groupEnd()
+            ->orderBy('is_read', 'ASC')
+            ->orderBy('created_at', 'DESC')
             ->findAll();
     }
- 
-    // Marquer toutes les notifications d'un user comme lues
-    public function markAllRead(int $userId): void
+
+    // Marquer une ou toutes les notifications comme lues
+    public function markAsRead(int $userId, int $notifId = null): void
     {
-        $this->where('id_user', $userId)->set('is_read', 1)->update();
+        $query = $this->where('id_user', $userId);
+        if ($notifId) {
+            $query->where('id', $notifId);
+        }
+        $query->set('is_read', 1)->update();
     }
- 
-    // Envoyer une notification broadcast à tous
-    public function broadcast(string $titre, string $message, string $type = 'info'): void
+
+    // Envoyer à TOUT LE MONDE
+    public function broadcast(string $titre, string $message, string $type = 'info'): bool
     {
-        $this->insert([
+        return $this->insert([
             'id_user'      => null,
             'titre'        => $titre,
             'message'      => $message,
             'type'         => $type,
             'is_broadcast' => 1,
-        ]);
+        ]) !== false;
     }
- 
-    // Compter les non lues d'un user
+
+    // Envoyer à UN UTILISATEUR précis
+    public function sendDirect(int $userId, string $titre, string $message, string $type = 'info'): bool
+    {
+        return $this->insert([
+            'id_user'      => $userId,
+            'titre'        => $titre,
+            'message'      => $message,
+            'type'         => $type,
+            'is_broadcast' => 0,
+        ]) !== false;
+    }
+
+    // Compter les non lues (Directes + Broadcast non lues pourrait être complexe, 
+    // ici on reste sur les directes pour la simplicité)
     public function countUnread(int $userId): int
     {
         return $this->where('id_user', $userId)
-            ->where('is_read', 0)->countAllResults();
+                    ->where('is_read', 0)
+                    ->countAllResults();
     }
 }

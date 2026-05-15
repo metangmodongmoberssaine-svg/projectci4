@@ -11,7 +11,18 @@ export interface ApiResponse<T> {
 
 export const RepasService = {
   /**
-   * Récupère la liste de tous les repas disponibles
+   * Récupère la liste des repas avec calcul dynamique des promotions [Client]
+   * Retourne les prix normaux barrés et les nouveaux prix recalculés si une offre est active.
+   * Peut être filtrée par l'ID d'une catégorie (?categorie=X)
+   */
+  getClientAll: async (idCategorie?: number): Promise<ApiResponse<Repas[]>> => {
+    const url = idCategorie ? `/repas/client?categorie=${idCategorie}` : "/repas/client";
+    const response = await api.get<ApiResponse<Repas[]>>(url);
+    return response.data;
+  },
+
+  /**
+   * Récupère la liste brute de tous les repas disponibles [Admin / Interne]
    * Peut être filtrée par l'ID d'une catégorie (?categorie=X)
    */
   getAll: async (idCategorie?: number): Promise<ApiResponse<Repas[]>> => {

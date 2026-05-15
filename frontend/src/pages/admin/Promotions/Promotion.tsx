@@ -12,11 +12,10 @@ import {
   MdToggleOn,
   MdToggleOff,
   MdRestaurant,
-  MdAttachMoney,
   MdEdit
 } from 'react-icons/md';
 import { PromotionService } from '../../../services/PromotionService';
-import { Promotion, PromotionType } from '../../../models/PromotionsModel';
+import { Promotion } from '../../../models/PromotionsModel';
 import { RepasService } from '../../../services/RepasService';
 import { Repas } from '../../../models/RepasModel';
 
@@ -93,7 +92,7 @@ export default function PromotionContent() {
     loadPromotions();
   }, [statusFilter]);
 
-  // Ajustement automatique du type de calcul si la cible change
+  // Forçage du type pourcentage si la cible change
   useEffect(() => {
     if (targetType === 'globale') {
       setFormData(prev => ({ ...prev, type: 'pourcentage', id_repas: null }));
@@ -121,7 +120,7 @@ export default function PromotionContent() {
     setTargetType(promo.id_repas ? 'repas' : 'globale');
     setFormData({
       id: promo.id,
-      type: promo.type,
+      type: 'pourcentage',
       new_amount: promo.new_amount,
       date_debut: promo.date_debut,
       date_fin: promo.date_fin,
@@ -153,36 +152,18 @@ export default function PromotionContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // --- ZONE DE VALIDATION COHÉRENCE PRIX ---
-    if (targetType === 'repas' && formData.id_repas && formData.type === 'montant_fixe') {
-      // Trouver le repas actuellement sélectionné pour connaître son prix d'origine
-      const selectedRepas = repas.find(r => r.id === formData.id_repas);
-      const reduction = formData.new_amount || 0;
-
-      // Correction de l'erreur TS2365 à l'aide de Number()
-      if (selectedRepas && reduction > Number(selectedRepas.prix)) {
-        alert(`Erreur : Le montant à réduire (${reduction} FCFA) ne peut pas être supérieur au prix du repas "${selectedRepas.nom}" (${selectedRepas.prix} FCFA).`);
-        return; // Bloque l'envoi de la requête
-      }
-    }
-    // ----------------------------------------
-
     setSubmitting(true);
 
-    const finalData = { ...formData };
+    const finalData = { ...formData, type: 'pourcentage' as const };
     if (targetType === 'globale') {
       finalData.id_repas = null;
-      finalData.type = 'pourcentage'; 
     }
     finalData.id_categorie = null; 
 
-    // Nettoyage de l'ID pour éviter l'erreur 500 liée à la modification de clé primaire sur CI4
     const { id, ...cleanData } = finalData;
 
     try {
       if (modalMode === 'edit' && formData.id) {
-        // L'ID va uniquement dans l'URL, cleanData va dans le Body
         await PromotionService.update(formData.id, cleanData);
       } else {
         await PromotionService.create(cleanData);
@@ -196,7 +177,6 @@ export default function PromotionContent() {
     }
   };
 
-  // Filtrage local pour la barre de recherche textuelle
   const filteredPromotions = promotions.filter(p => {
     const search = searchTerm.toLowerCase();
     const repasMatch = p.repas_nom?.toLowerCase().includes(search);
@@ -211,7 +191,7 @@ export default function PromotionContent() {
       <div className="d-flex justify-content-between align-items-center mb-4" data-aos="fade-down">
         <div>
           <h3 className="fw-bold text-af-black mb-1">Événements Promotionnels</h3>
-          <p className="text-muted small">Planifiez des baisses de prix pour les fêtes et les occasions spéciales</p>
+          <p className="text-muted small">Planifiez des baisses de prix en pourcentage pour votre menu</p>
         </div>
         <button 
           className="btn btn-primary d-flex align-items-center gap-2 px-4 shadow-sm"
@@ -261,15 +241,15 @@ export default function PromotionContent() {
         </div>
       </div>
 
-      {/* LISTE / TABLEAU DES PROMOTIONS */}
+      {/* TABLEAU */}
       <div className="card border-0 shadow-sm" style={{ borderRadius: 'var(--af-border-radius)', overflow: 'hidden' }} data-aos="fade-up" data-aos-delay="200">
         <div className="table-responsive">
           <table className="table table-hover align-middle mb-0">
             <thead className="bg-af-black text-white">
               <tr>
                 <th className="py-3 ps-4">Cible de l'offre</th>
-                <th className="py-3">Type d'offre</th>
-                <th className="py-3">Valeur / Montant</th>
+                <th className="py-3">Type</th>
+                <th className="py-3">Valeur (%)</th>
                 <th className="py-3">Période de validité</th>
                 <th className="py-3 text-center">Statut</th>
                 <th className="py-3 text-center">Actions</th>
@@ -314,13 +294,13 @@ export default function PromotionContent() {
                     </div>
                   </td>
                   <td>
-                    <span className={`badge rounded-pill px-3 py-2 ${promo.type === 'pourcentage' ? 'bg-light text-success' : 'bg-light text-primary'}`}>
-                      {promo.type === 'pourcentage' ? 'Baisse en %' : 'Montant Déduit'}
+                    <span className="badge rounded-pill px-3 py-2 bg-light text-success">
+                      Baisse en %
                     </span>
                   </td>
                   <td>
                     <span className="fw-bold text-af-black">
-                      {promo.new_amount} {promo.type === 'pourcentage' ? '%' : 'FCFA'}
+                      {promo.new_amount} %
                     </span>
                   </td>
                   <td>
@@ -355,11 +335,11 @@ export default function PromotionContent() {
         </div>
       </div>
 
-      {/* MODAL PLANIFICATION / MODIFICATION D'ÉVÉNEMENT */}
+      {/* MODAL */}
       {showModal && (
         <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '20px' }} data-aos="zoom-in" data-aos-duration="400">
+            <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '20px' }}>
               <div className="modal-header border-0 pb-0">
                 <h5 className="fw-bold pt-2 px-2 text-af-black">
                   {modalMode === 'edit' ? "Modifier l'événement" : "Planifier un événement"}
@@ -370,7 +350,7 @@ export default function PromotionContent() {
               <form onSubmit={handleSubmit}>
                 <div className="modal-body p-4">
                   
-                  {/* CHOIX DE LA CIBLE */}
+                  {/* CIBLE */}
                   <div className="mb-4">
                     <label className="form-label small fw-bold text-muted">Cible de la promotion</label>
                     <div className="d-flex gap-2 bg-af-light p-1 rounded-3">
@@ -391,9 +371,8 @@ export default function PromotionContent() {
                     </div>
                   </div>
 
-                  {/* SÉLECTEUR DE PLAT AVEC SON PRIX */}
                   {targetType === 'repas' && (
-                    <div className="mb-3" data-aos="fade-down" data-aos-duration="200">
+                    <div className="mb-3">
                       <label className="form-label small fw-bold">Sélectionner le plat</label>
                       <select 
                         className="form-select bg-light border-0 py-2" 
@@ -411,40 +390,18 @@ export default function PromotionContent() {
                     </div>
                   )}
 
-                  {/* TYPE DE VARIATION */}
+                  {/* VALEUR POURCENTAGE */}
                   <div className="mb-3">
-                    <label className="form-label small fw-bold">Type de calcul de la baisse</label>
-                    <select 
-                      className="form-select bg-light border-0 py-2"
-                      value={formData.type}
-                      disabled={targetType === 'globale'} 
-                      onChange={(e) => setFormData({ ...formData, type: e.target.value as PromotionType })}
-                    >
-                      <option value="pourcentage">Application en Pourcentage (%)</option>
-                      <option value="montant_fixe">Soustraction d'un montant fixe (FCFA)</option>
-                    </select>
-                    {targetType === 'globale' && (
-                      <div className="form-text text-success small mt-1">
-                        * Le mode pourcentage est requis pour les actions globales sur l'ensemble du menu.
-                      </div>
-                    )}
-                  </div>
-
-                  {/* VALEUR DU POURCENTAGE OU MONTANT */}
-                  <div className="mb-3">
-                    <label className="form-label small fw-bold">
-                      {formData.type === 'pourcentage' ? 'Valeur du pourcentage (%)' : 'Montant à déduire (FCFA)'}
-                    </label>
+                    <label className="form-label small fw-bold">Valeur de la réduction (%)</label>
                     <div className="input-group">
-                      <span className="input-group-text bg-light border-0">
-                        {formData.type === 'pourcentage' ? '%' : <MdAttachMoney />}
-                      </span>
+                      <span className="input-group-text bg-light border-0">%</span>
                       <input 
                         type="number" 
                         step="any"
                         min="0.01"
+                        max="100"
                         className="form-control bg-light border-0 py-2"
-                        placeholder={formData.type === 'pourcentage' ? 'Ex: 15' : 'Ex: 1000'}
+                        placeholder="Ex: 15"
                         required
                         value={formData.new_amount || ""}
                         onChange={(e) => setFormData({ ...formData, new_amount: Number(e.target.value) })}
