@@ -15,7 +15,6 @@ class CreateRepasTable extends Migration
             'prix'              => ['type'=>'DECIMAL','constraint'=>'10,2'],
             'quantite'          => ['type'=>'INT','default'=>0],
             'photo'             => ['type'=>'VARCHAR','constraint'=>255,'null'=>true],
-            'temps_preparation' => ['type'=>'INT','default'=>0],
             'status'            => ['type'=>'ENUM','constraint'=>['disponible','indisponible'],'default'=>'disponible'],
             'created_at'        => ['type'=>'DATETIME','null'=>true],
             'updated_at'        => ['type'=>'DATETIME','null'=>true],
