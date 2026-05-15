@@ -125,6 +125,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
           </li>
 
           <li className="nav-item">
+            <NavLink to="/admin/repas" style={navLinkStyle} className="nav-link-custom" data-label="Repas">
+              <MdFastfood size={22} className={isCollapsed ? "" : "me-3"} />
+              {!isCollapsed && <span className="fw-bold">Repas</span>}
+            </NavLink>
+          </li>
+
+          <li className="nav-item">
             <NavLink to="/admin/profile" style={navLinkStyle} className="nav-link-custom" data-label="Mon Profil">
               <MdAccountCircle size={22} className={isCollapsed ? "" : "me-3"} />
               {!isCollapsed && <span className="fw-bold">Mon Profil</span>}
