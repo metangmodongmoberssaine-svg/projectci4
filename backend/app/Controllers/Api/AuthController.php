@@ -16,7 +16,6 @@ class AuthController extends BaseController
      */
     public function register()
     {
-        // On récupère les données peu importe le format (JSON ou Form-Data)
         $input = $this->request->getJSON(true) ?: $this->request->getPost();
 
         $rules = [
@@ -27,7 +26,6 @@ class AuthController extends BaseController
             'password'  => 'required|min_length[8]',
         ];
 
-        // Validation des données entrantes
         if (!$this->validateData($input, $rules)) {
             return $this->response->setStatusCode(422)->setJSON([
                 'status' => false,
@@ -37,7 +35,6 @@ class AuthController extends BaseController
 
         $model = new UserModel();
 
-        // Génération de l'OTP (6 chiffres)
         $otp     = (string) rand(100000, 999999);
         $expires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
 
@@ -46,7 +43,7 @@ class AuthController extends BaseController
             'prenom'         => $input['prenom'],
             'telephone'      => $input['telephone'],
             'email'          => $input['email'],
-            'password'       => $input['password'], // Le UserModel gère le hachage
+            'password'       => $input['password'], 
             'ville'          => $input['ville'] ?? null,
             'otp_code'       => $otp,
             'otp_expires_at' => $expires,
@@ -56,7 +53,6 @@ class AuthController extends BaseController
         ];
 
         if ($model->insert($userData)) {
-            // --- ENVOI DE L'EMAIL VIA GMAIL ---
             $emailService = Services::email();
             $emailService->setTo($userData['email']);
             $emailService->setSubject('Vérification de compte - AfricaFood');
@@ -81,7 +77,6 @@ class AuthController extends BaseController
                     'message' => 'Compte créé avec succès. Vérifiez votre boîte mail pour le code OTP.',
                 ]);
             } else {
-                // Si l'insertion a marché mais que le mail bug
                 return $this->response->setStatusCode(201)->setJSON([
                     'status'  => true,
                     'message' => 'Compte créé, mais l\'envoi du mail a échoué.',
@@ -90,7 +85,6 @@ class AuthController extends BaseController
             }
         }
 
-        // Si l'insertion échoue, on affiche les erreurs du modèle (ex: validation DB)
         return $this->response->setStatusCode(500)->setJSON([
             'status'    => false,
             'message'   => 'Erreur lors de la création du compte.',
@@ -147,7 +141,7 @@ class AuthController extends BaseController
 
         $user = $model->findByEmail($email);
 
-        if (!$user || !password_verify($password, $user['password'])) {
+        if (!$user || !password_verify($password, (string)$user['password'])) {
             return $this->response->setStatusCode(401)->setJSON([
                 'status'  => false,
                 'message' => 'Email ou mot de passe incorrect.'
@@ -161,19 +155,17 @@ class AuthController extends BaseController
             ]);
         }
 
-        // Génération du Token JWT
         $key     = getenv('JWT_SECRET') ?: 'ma_cle_par_defaut';
         $payload = [
             'iss'  => 'AfricaFood',
             'iat'  => time(),
-            'exp'  => time() + (60 * 60 * 24), // Valide 24 heures
+            'exp'  => time() + (60 * 60 * 24), 
             'uid'  => (int) $user['id'],
             'role' => $user['role']
         ];
 
         $token = JWT::encode($payload, $key, 'HS256');
 
-        // Nettoyage des données sensibles avant réponse
         unset($user['password'], $user['otp_code'], $user['otp_expires_at']);
 
         return $this->response->setJSON([
@@ -184,15 +176,153 @@ class AuthController extends BaseController
     }
 
     /**
+     * Récupérer les informations du profil
+     * GET /api/auth/profile
+     */
+    public function profile()
+    {
+        $userId = $this->getAuthenticatedUserId();
+        if (!$userId) return $this->errorUnauthorized();
+
+        $model = new UserModel();
+        $user = $model->find($userId);
+
+        if (!$user) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'status' => false,
+                'message' => 'Utilisateur introuvable.'
+            ]);
+        }
+
+        unset($user['password'], $user['otp_code'], $user['otp_expires_at']);
+
+        return $this->response->setJSON([
+            'status' => true,
+            'user'   => $user
+        ]);
+    }
+
+    /**
+     * Mettre à jour les informations du profil
+     * PUT /api/auth/update-profile
+     */
+    public function updateProfile()
+    {
+        $userId = $this->getAuthenticatedUserId();
+        if (!$userId) return $this->errorUnauthorized();
+
+        $input = $this->request->getJSON(true) ?: $this->request->getPost();
+
+        $rules = [
+            'nom'       => 'permit_empty|min_length[2]',
+            'prenom'    => 'permit_empty|min_length[2]',
+            'telephone' => "permit_empty|is_unique[users.telephone,id,{$userId}]",
+            'email'     => "permit_empty|valid_email|is_unique[users.email,id,{$userId}]",
+        ];
+
+        if (!$this->validateData($input, $rules)) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status' => false,
+                'errors' => $this->validator->getErrors()
+            ]);
+        }
+
+        $model = new UserModel();
+        $allowedFields = ['nom', 'prenom', 'telephone', 'email', 'ville'];
+        $updateData = array_intersect_key($input, array_flip($allowedFields));
+
+        if (empty($updateData)) {
+            return $this->response->setJSON(['status' => false, 'message' => 'Aucune donnée à modifier.']);
+        }
+
+        if ($model->update($userId, $updateData)) {
+            return $this->response->setJSON([
+                'status'  => true,
+                'message' => 'Profil mis à jour avec succès.'
+            ]);
+        }
+
+        return $this->response->setStatusCode(500)->setJSON(['status' => false, 'message' => 'Erreur de mise à jour.']);
+    }
+
+    /**
+     * Changer le mot de passe
+     * POST /api/auth/change-password
+     */
+    public function changePassword()
+    {
+        $userId = $this->getAuthenticatedUserId();
+        if (!$userId) return $this->errorUnauthorized();
+
+        $input = $this->request->getJSON(true) ?: $this->request->getPost();
+
+        $rules = [
+            'old_password'     => 'required',
+            'new_password'     => 'required|min_length[8]',
+            'confirm_password' => 'required|matches[new_password]'
+        ];
+
+        if (!$this->validateData($input, $rules)) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status' => false,
+                'errors' => $this->validator->getErrors()
+            ]);
+        }
+
+        $model = new UserModel();
+        $user = $model->find($userId);
+
+        $oldPasswordInput = (string) ($input['old_password'] ?? '');
+        $currentHashedPassword = (string) ($user['password'] ?? '');
+
+        if (!password_verify($oldPasswordInput, $currentHashedPassword)) {
+            return $this->response->setStatusCode(401)->setJSON([
+                'status'  => false,
+                'message' => 'L\'ancien mot de passe est incorrect.'
+            ]);
+        }
+
+        if ($model->update($userId, ['password' => $input['new_password']])) {
+            return $this->response->setJSON([
+                'status'  => true,
+                'message' => 'Mot de passe modifié avec succès.'
+            ]);
+        }
+
+        return $this->response->setStatusCode(500)->setJSON(['status' => false, 'message' => 'Erreur technique.']);
+    }
+
+    /**
+     * Déconnexion
      * POST /api/auth/logout
      */
     public function logout()
     {
-        // En JWT (Stateless), le serveur ne détruit pas de session.
-        // On renvoie juste un succès pour que le client (Flutter/React) supprime le token localement.
         return $this->response->setJSON([
             'status'  => true,
             'message' => 'Déconnexion réussie.'
         ]);
+    }
+
+    /**
+     * Helpers privés
+     */
+    private function getAuthenticatedUserId()
+    {
+        $authHeader = $this->request->getServer('HTTP_AUTHORIZATION');
+        if (!$authHeader) return null;
+
+        $token = str_replace('Bearer ', '', $authHeader);
+        try {
+            $key = getenv('JWT_SECRET') ?: 'ma_cle_par_defaut';
+            $decoded = JWT::decode($token, new Key($key, 'HS256'));
+            return $decoded->uid;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    private function errorUnauthorized() {
+        return $this->response->setStatusCode(401)->setJSON(['status' => false, 'message' => 'Session invalide.']);
     }
 }

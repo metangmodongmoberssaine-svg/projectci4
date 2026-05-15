@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../contents/Sidebar';
-
 const AdminDashboard: React.FC = () => {
     const [isCollapsed, setIsCollapsed] = useState(true);
 

@@ -1,4 +1,3 @@
-// src/services/AuthService.ts
 import api from './Api';
 import { AuthResponse, User } from '../models/UserModel';
 
@@ -15,11 +14,31 @@ export interface RegisterData {
 }
 
 /**
+ * Interface pour la modification du profil
+ */
+export interface UpdateProfileData {
+    nom?: string;
+    prenom?: string;
+    telephone?: string;
+    email?: string;
+    ville?: string;
+}
+
+/**
+ * Interface pour le changement de mot de passe
+ */
+export interface ChangePasswordData {
+    old_password: string;
+    new_password: string;
+    confirm_password: string;
+}
+
+/**
  * Service d'authentification AfricaFood
  */
 const AuthService = {
     /**
-     * Inscription : Crée le compte et déclenche l'envoi de l'OTP par le backend
+     * Inscription : Crée le compte et déclenche l'envoi de l'OTP
      */
     register: async (data: RegisterData): Promise<AuthResponse> => {
         const response = await api.post<AuthResponse>('/auth/register', data);
@@ -28,8 +47,6 @@ const AuthService = {
 
     /**
      * Vérification OTP : Active le compte de l'utilisateur
-     * @param email L'email de l'utilisateur
-     * @param otp Le code à 6 chiffres reçu par mail
      */
     verifyOtp: async (email: string, otp: string): Promise<AuthResponse> => {
         const response = await api.post<AuthResponse>('/auth/verify-otp', { email, otp });
@@ -42,12 +59,40 @@ const AuthService = {
     login: async (credentials: Pick<RegisterData, 'email' | 'password'>): Promise<AuthResponse> => {
         const response = await api.post<AuthResponse>('/auth/login', credentials);
         
-        // Si la connexion réussit, on stocke le token immédiatement
         if (response.data.status && response.data.token) {
             localStorage.setItem('auth_token', response.data.token);
             localStorage.setItem('user_data', JSON.stringify(response.data.user));
         }
         
+        return response.data;
+    },
+
+    /**
+     * Récupère le profil frais depuis le serveur
+     * Utile pour synchroniser les infos après une modification
+     */
+    getProfile: async (): Promise<AuthResponse> => {
+        const response = await api.get<AuthResponse>('/auth/profile');
+        if (response.data.status && response.data.user) {
+            // On met à jour le stockage local avec les infos fraîches
+            localStorage.setItem('user_data', JSON.stringify(response.data.user));
+        }
+        return response.data;
+    },
+
+    /**
+     * Met à jour les informations de l'utilisateur (nom, tel, ville...)
+     */
+    updateProfile: async (data: UpdateProfileData): Promise<AuthResponse> => {
+        const response = await api.put<AuthResponse>('/auth/update-profile', data);
+        return response.data;
+    },
+
+    /**
+     * Change le mot de passe
+     */
+    changePassword: async (data: ChangePasswordData): Promise<AuthResponse> => {
+        const response = await api.post<AuthResponse>('/auth/change-password', data);
         return response.data;
     },
 
@@ -59,7 +104,6 @@ const AuthService = {
             const response = await api.post<AuthResponse>('/auth/logout');
             return response.data;
         } finally {
-            // Quoi qu'il arrive (même si le token est expiré), on vide le localStorage
             localStorage.removeItem('auth_token');
             localStorage.removeItem('user_data');
         }
@@ -70,7 +114,11 @@ const AuthService = {
      */
     getCurrentUser: (): User | null => {
         const user = localStorage.getItem('user_data');
-        return user ? JSON.parse(user) : null;
+        try {
+            return user ? JSON.parse(user) : null;
+        } catch (e) {
+            return null;
+        }
     }
 };
 
