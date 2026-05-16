@@ -3,7 +3,8 @@ import LivreurService from '../../services/LivreurService';
 import { User } from '../../models/UserModel';
 import { 
     FaUserPlus, FaSearch, FaMotorcycle, FaTrash, 
-    FaPowerOff, FaEnvelope, FaPhone, FaCheckCircle, FaExclamationCircle 
+    FaPowerOff, FaEnvelope, FaPhone, FaCheckCircle, FaExclamationCircle,
+    FaChevronLeft, FaChevronRight
 } from 'react-icons/fa';
 import { IoMdRefresh } from 'react-icons/io';
 import AOS from 'aos';
@@ -16,6 +17,11 @@ export default function Livreur() {
     const [searchTerm, setSearchTerm] = useState('');
     const [feedback, setFeedback] = useState<{ type: 'success' | 'danger', msg: string } | null>(null);
 
+    // --- États pour la Pagination ---
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalResults, setTotalResults] = useState(0);
+
     const [formData, setFormData] = useState({
         nom: '', prenom: '', email: '', telephone: ''
     });
@@ -26,14 +32,31 @@ export default function Livreur() {
             once: true,
             easing: 'ease-out-quad'
         });
-        fetchLivreurs();
+        fetchLivreurs(1, searchTerm);
     }, []);
 
-    const fetchLivreurs = async (search = '') => {
+    // Version corrigée pour exploiter proprement le pager du backend
+    const fetchLivreurs = async (page = 1, search = '') => {
         setLoading(true);
         try {
-            const res = await LivreurService.getAllLivreurs(1, search);
-            setLivreurs(res.data);
+            const res = await LivreurService.getAllLivreurs(page, search);
+            
+            // Sécurité : Fallback sur tableau vide si data est null/undefined
+            const dataResult = res.data || [];
+            setLivreurs(dataResult);
+            
+            // Synchronisation de la pagination avec le pager de CodeIgniter
+            if (res.pager) {
+                setCurrentPage(page);
+                setTotalResults(res.pager.total ?? res.total ?? dataResult.length);
+                setTotalPages(res.pager.pageCount ?? 1);
+            } else {
+                // Fallback si le backend n'a pas renvoyé le pager attendu
+                setCurrentPage(page);
+                setTotalResults(res.total ?? dataResult.length);
+                setTotalPages(1);
+            }
+            
             setTimeout(() => AOS.refresh(), 100);
         } catch (err) {
             showFeedback('Erreur lors du chargement des livreurs', 'danger');
@@ -55,7 +78,7 @@ export default function Livreur() {
             if (res.status) {
                 showFeedback(`Succès ! Accès envoyés à ${formData.email}`, 'success');
                 setFormData({ nom: '', prenom: '', email: '', telephone: '' });
-                fetchLivreurs();
+                fetchLivreurs(1, searchTerm);
             }
         } catch (err: any) {
             showFeedback('Erreur : Email ou téléphone déjà utilisé.', 'danger');
@@ -68,7 +91,7 @@ export default function Livreur() {
         try {
             await LivreurService.toggleStatus(id, !currentStatus);
             showFeedback('Statut mis à jour avec succès', 'success');
-            fetchLivreurs(searchTerm);
+            fetchLivreurs(currentPage, searchTerm);
         } catch (err) { 
             showFeedback('Erreur lors de la mise à jour du statut', 'danger'); 
         }
@@ -79,9 +102,15 @@ export default function Livreur() {
         try {
             await LivreurService.deleteLivreur(id);
             showFeedback('Livreur retiré de la flotte', 'success');
-            fetchLivreurs(searchTerm);
+            fetchLivreurs(currentPage, searchTerm);
         } catch (err) { 
             showFeedback('Erreur lors de la suppression', 'danger'); 
+        }
+    };
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            fetchLivreurs(newPage, searchTerm);
         }
     };
 
@@ -145,7 +174,6 @@ export default function Livreur() {
             {/* LISTE ET FILTRES */}
             <div className="card border-0 shadow-sm" style={{ borderRadius: '15px', overflow: 'hidden' }} data-aos="fade-up" data-aos-delay="200">
                 <div className="card-body p-0">
-                    {/* Barre de recherche interne */}
                     <div className="p-3 border-bottom d-flex justify-content-between align-items-center gap-3 bg-white">
                         <div className="input-group border rounded-pill px-3 py-1 bg-af-light flex-grow-1" style={{ maxWidth: '400px' }}>
                             <span className="input-group-text bg-transparent border-0 text-muted">
@@ -156,10 +184,10 @@ export default function Livreur() {
                                 className="form-control bg-transparent border-0 shadow-none" 
                                 placeholder="Rechercher un livreur..." 
                                 value={searchTerm}
-                                onChange={(e) => { setSearchTerm(e.target.value); fetchLivreurs(e.target.value); }}
+                                onChange={(e) => { setSearchTerm(e.target.value); fetchLivreurs(1, e.target.value); }}
                             />
                         </div>
-                        <button onClick={() => fetchLivreurs(searchTerm)} className="btn btn-outline-secondary border-0 rounded-circle p-2" title="Actualiser">
+                        <button onClick={() => fetchLivreurs(currentPage, searchTerm)} className="btn btn-outline-secondary border-0 rounded-circle p-2" title="Actualiser">
                             <IoMdRefresh size={22} className={`text-af-orange ${loading ? 'fa-spin' : ''}`} />
                         </button>
                     </div>
@@ -224,6 +252,64 @@ export default function Livreur() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* --- MENU DE PAGINATION --- */}
+                    {livreurs.length > 0 && (
+                        <div className="p-3 border-top d-flex justify-content-between align-items-center bg-white flex-wrap gap-2">
+                            <div className="text-muted small">
+                                Affichage de la page <span className="fw-bold">{currentPage}</span> sur <span className="fw-bold">{totalPages}</span> ({totalResults} livreurs au total)
+                            </div>
+                            
+                            <nav aria-label="Navigation de la liste des livreurs">
+                                <ul className="pagination pagination-sm mb-0 gap-1">
+                                    {/* Bouton Précédent */}
+                                    <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                                        <button 
+                                            className="page-link rounded-circle border-0 d-flex align-items-center justify-content-center" 
+                                            style={{ width: '32px', height: '32px' }}
+                                            onClick={() => handlePageChange(currentPage - 1)}
+                                            disabled={currentPage === 1}
+                                        >
+                                            <FaChevronLeft size={12} />
+                                        </button>
+                                    </li>
+
+                                    {/* Génération dynamique des numéros de pages */}
+                                    {[...Array(totalPages)].map((_, index) => {
+                                        const pageNum = index + 1;
+                                        return (
+                                            <li key={pageNum} className={`page-item ${currentPage === pageNum ? 'active' : ''}`}>
+                                                <button 
+                                                    className="page-link rounded-circle border-0 d-flex align-items-center justify-content-center fw-bold"
+                                                    style={{ 
+                                                        width: '32px', 
+                                                        height: '32px',
+                                                        backgroundColor: currentPage === pageNum ? '#E67E22' : 'transparent',
+                                                        color: currentPage === pageNum ? '#fff' : '#2C3E50'
+                                                    }}
+                                                    onClick={() => handlePageChange(pageNum)}
+                                                >
+                                                    {pageNum}
+                                                </button>
+                                            </li>
+                                        );
+                                    })}
+
+                                    {/* Bouton Suivant */}
+                                    <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                                        <button 
+                                            className="page-link rounded-circle border-0 d-flex align-items-center justify-content-center" 
+                                            style={{ width: '32px', height: '32px' }}
+                                            onClick={() => handlePageChange(currentPage + 1)}
+                                            disabled={currentPage === totalPages}
+                                        >
+                                            <FaChevronRight size={12} />
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
