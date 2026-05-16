@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 import { 
   MdAdd, 
   MdEdit, 
@@ -8,8 +10,8 @@ import {
   MdCategory,
   MdSave
 } from 'react-icons/md';
-import CategorieService from '../../services/CategorieService';
-import { Categorie } from '../../models/CategorieModel';
+import CategorieService from '../../../services/CategorieService';
+import { Categorie } from '../../../models/CategorieModel';
 
 export default function CategoriesContent() {
   const [categories, setCategories] = useState<Categorie[]>([]);
@@ -25,13 +27,24 @@ export default function CategoriesContent() {
     description: ''
   });
 
+  // Initialisation AOS
+  useEffect(() => {
+    AOS.init({
+      duration: 800,
+      once: true,
+      easing: 'ease-out-quad',
+    });
+  }, []);
+
   // Chargement des données
   const loadCategories = async () => {
     setLoading(true);
     try {
       const response = await CategorieService.getAll();
-      // On s'adapte à la structure de ta réponse API
-      setCategories(Array.isArray(response) ? response : (response as any).categories || []);
+      const data = Array.isArray(response) ? response : (response as any).categories || [];
+      setCategories(data);
+      // Rafraîchir AOS après le rendu des données
+      setTimeout(() => AOS.refresh(), 100);
     } catch (error) {
       console.error("Erreur chargement catégories:", error);
     } finally {
@@ -91,10 +104,13 @@ export default function CategoriesContent() {
   );
 
   return (
-    <div className="container-fluid p-0 animate__animated animate__fadeIn">
+    <div className="container-fluid p-0 overflow-hidden">
       
       {/* HEADER */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div 
+        className="d-flex justify-content-between align-items-center mb-4"
+        data-aos="fade-down"
+      >
         <div>
           <h3 className="fw-bold text-af-black mb-1">Gestion des Catégories</h3>
           <p className="text-muted small">Organisez les produits de la plateforme AfricaFood</p>
@@ -110,7 +126,12 @@ export default function CategoriesContent() {
       </div>
 
       {/* BARRE D'ACTIONS */}
-      <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: 'var(--af-border-radius)' }}>
+      <div 
+        className="card border-0 shadow-sm mb-4" 
+        style={{ borderRadius: 'var(--af-border-radius)' }}
+        data-aos="fade-up"
+        data-aos-delay="100"
+      >
         <div className="card-body p-3">
           <div className="row g-3 align-items-center">
             <div className="col-md-6">
@@ -141,7 +162,12 @@ export default function CategoriesContent() {
       </div>
 
       {/* TABLEAU */}
-      <div className="card border-0 shadow-sm" style={{ borderRadius: 'var(--af-border-radius)', overflow: 'hidden' }}>
+      <div 
+        className="card border-0 shadow-sm" 
+        style={{ borderRadius: 'var(--af-border-radius)', overflow: 'hidden' }}
+        data-aos="fade-up"
+        data-aos-delay="200"
+      >
         <div className="table-responsive">
           <table className="table table-hover align-middle mb-0">
             <thead className="bg-af-black text-white">
@@ -159,8 +185,13 @@ export default function CategoriesContent() {
                     <div className="spinner-border text-af-orange" role="status"></div>
                   </td>
                 </tr>
-              ) : filteredCategories.map((cat) => (
-                <tr key={cat.id}>
+              ) : filteredCategories.map((cat, index) => (
+                <tr 
+                  key={cat.id}
+                  data-aos="fade-left"
+                  data-aos-delay={index * 50}
+                  data-aos-offset="0"
+                >
                   <td className="ps-4 fw-bold text-muted">#{cat.id}</td>
                   <td>
                     <div className="d-flex align-items-center">
@@ -196,7 +227,12 @@ export default function CategoriesContent() {
       {showModal && (
         <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '20px' }}>
+            <div 
+              className="modal-content border-0 shadow-lg" 
+              style={{ borderRadius: '20px' }}
+              data-aos="zoom-in"
+              data-aos-duration="400"
+            >
               <div className="modal-header border-0 pb-0">
                 <h5 className="fw-bold pt-2 px-2">
                   {isEditing ? "Modifier la catégorie" : "Nouvelle catégorie"}

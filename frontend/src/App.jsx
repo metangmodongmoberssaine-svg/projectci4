@@ -6,10 +6,14 @@ import Contact from './pages/Contact'
 import About from './pages/About' 
 import AdminDashboard from './pages/AdminDashboard'
 import Otp from './pages/Otp'
-import CategoriesContent from './pages/admin/CategoriesContent'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import Repas from './pages/admin/Repas/Repas'
 import './App.css'
-
+import CategoriesContent from './pages/admin/categories/Categories'
+import Promotion from './pages/admin/Promotions/Promotion'
+import Profilte from './pages/admin/Profilte'
+import Notification from './pages/admin/Notification'
+import Livreur from './pages/admin/Livreur'
 function App() {
 
   return (
@@ -25,7 +29,11 @@ function App() {
 
         <Route path="/admin/*" element={<AdminDashboard />}>
             <Route path="categories" element={<CategoriesContent />} />
-        
+            <Route path="repas" element={<Repas />} />
+            <Route path="promotions" element={<Promotion />} />
+            <Route path="profile" element={<Profilte />} />
+            <Route path="notifications" element={<Notification />} />
+            <Route path="livreurs" element={<Livreur />} />
         </Route>
 
       </Routes>

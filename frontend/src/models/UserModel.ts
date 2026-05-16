@@ -44,3 +44,17 @@ export interface ApiValidationError {
         prenom?: string;
     };
 }
+
+export interface ChangePasswordData {
+    old_password: string;
+    new_password: string;
+    confirm_password: string;
+}
+
+export interface UpdateProfileData {
+    nom?: string;
+    prenom?: string;
+    telephone?: string;
+    email?: string;
+    ville?: string;
+}

@@ -15,28 +15,82 @@ $routes->get('/', 'Home::index');
 $routes->group('api', ['namespace' => 'App\Controllers\Api'], function($routes) {
     
     /**
-     * Authentification (Public & Privé)
+     * Authentification & Profil
      */
     $routes->group('auth', function($routes) {
         $routes->post('register', 'AuthController::register');
         $routes->post('verify-otp', 'AuthController::verifyOtp');
         $routes->post('login', 'AuthController::login');
-        $routes->post('logout', 'AuthController::logout', ['filter' => 'jwt']);
+
+        $routes->group('', ['filter' => 'jwt'], function($routes) {
+            $routes->get('profile', 'AuthController::profile');
+            $routes->put('update-profile', 'AuthController::updateProfile');
+            $routes->post('change-password', 'AuthController::changePassword');
+            $routes->post('logout', 'AuthController::logout');
+        });
+    });
+
+    /**
+     * Gestion des Livreurs
+     * FIX : '' au lieu de '/' supprime le double slash api/livreurs//4 
+     * qui causait la 404 sur PUT et DELETE.
+     */
+    $routes->group('livreurs', ['filter' => 'jwt'], function($routes) {
+        $routes->resource('', ['controller' => 'LivreurController', 'webservice' => true]);
+    });
+
+    /**
+     * Gestion des Notifications
+     */
+    $routes->group('notifications', ['filter' => 'jwt'], function($routes) {
+        $routes->get('/', 'NotificationController::index');           
+        $routes->patch('read-all', 'NotificationController::markRead'); 
+        $routes->patch('read/(:num)', 'NotificationController::markRead/$1'); 
+        $routes->post('send', 'NotificationController::send'); 
     });
 
     /**
      * Gestion des Catégories
      */
     $routes->group('categories', function($routes) {
-        // Routes publiques (Consultation)
         $routes->get('/', 'CategorieController::index');
         $routes->get('(:num)', 'CategorieController::show/$1');
         
-        // Routes protégées (Administration)
-        // Nécessite le Header "Authorization: Bearer <votre_token>"
-        $routes->post('/', 'CategorieController::create', ['filter' => 'jwt']);
-        $routes->put('(:num)', 'CategorieController::update/$1', ['filter' => 'jwt']);
-        $routes->delete('(:num)', 'CategorieController::delete/$1', ['filter' => 'jwt']);
+        $routes->group('', ['filter' => 'jwt'], function($routes) {
+            $routes->post('/', 'CategorieController::create');
+            $routes->put('(:num)', 'CategorieController::update/$1');
+            $routes->delete('(:num)', 'CategorieController::delete/$1');
+        });
+    });
+
+    /**
+     * Gestion des Repas
+     */
+    $routes->group('repas', function($routes) {
+        $routes->get('client', 'RepasController::clientIndex'); 
+        $routes->get('/', 'RepasController::index');
+        $routes->get('(:num)', 'RepasController::show/$1');
+
+        $routes->group('', ['filter' => 'jwt'], function($routes) {
+            $routes->post('/', 'RepasController::create'); 
+            $routes->put('(:num)', 'RepasController::update/$1'); 
+            $routes->delete('(:num)', 'RepasController::delete/$1'); 
+            $routes->patch('(:num)/status', 'RepasController::toggleStatus');
+        });
+    });
+
+    /**
+     * Gestion des Promotions
+     */
+    $routes->group('promotions', function($routes) {
+        $routes->get('/', 'PromotionController::index');
+        
+        $routes->group('', ['filter' => 'jwt'], function($routes) {
+            $routes->post('/', 'PromotionController::store');
+            $routes->put('(:num)', 'PromotionController::update/$1');
+            $routes->delete('(:num)', 'PromotionController::delete/$1');
+            $routes->patch('(:num)/toggle', 'PromotionController::toggle/$1');
+        });
     });
 
 });
