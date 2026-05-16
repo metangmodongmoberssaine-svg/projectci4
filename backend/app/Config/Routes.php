@@ -31,6 +31,17 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function($routes) 
     });
 
     /**
+     * Gestion des Adresses (Protégée par JWT)
+     */
+    $routes->group('adresses', ['filter' => 'jwt'], function($routes) {
+        $routes->get('/', 'AdresseController::index');                               // GET    /api/adresses (Lister ses adresses)
+        $routes->post('/', 'AdresseController::store');                              // POST   /api/adresses (Ajouter une adresse)
+        $routes->put('(:num)', 'AdresseController::update/$1');                       // PUT    /api/adresses/{id} (Modifier)
+        $routes->delete('(:num)', 'AdresseController::delete/$1');                    // DELETE /api/adresses/{id} (Supprimer)
+        $routes->patch('(:num)/default', 'AdresseController::setDefault/$1');        // PATCH  /api/adresses/{id}/default (Définir par défaut)
+    });
+
+    /**
      * Gestion des Contacts (Public & Admin)
      */
     $routes->group('contact', function($routes) {
@@ -48,8 +59,6 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function($routes) 
 
     /**
      * Gestion des Livreurs
-     * FIX : '' au lieu de '/' supprime le double slash api/livreurs//4 
-     * qui causait la 404 sur PUT et DELETE.
      */
     $routes->group('livreurs', ['filter' => 'jwt'], function($routes) {
         $routes->resource('', ['controller' => 'LivreurController', 'webservice' => true]);
@@ -107,6 +116,18 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function($routes) 
             $routes->delete('(:num)', 'PromotionController::delete/$1');
             $routes->patch('(:num)/toggle', 'PromotionController::toggle/$1');
         });
+    });
+
+    /**
+     * Gestion du Panier (Protégée par JWT)
+     * Correction de la résolution d'URI pour CI4
+     */
+    $routes->group('panier', ['filter' => 'jwt'], function($routes) {
+        $routes->get('/', 'PanierController::index');                                    // GET    /api/panier
+        $routes->post('add', 'PanierController::add');                                   // POST   /api/panier/add
+        $routes->put('item/(:num)', 'PanierController::update/$1');                     // PUT    /api/panier/item/{id}
+        $routes->delete('item/(:num)', 'PanierController::remove/$1');                  // DELETE /api/panier/item/{id}
+        $routes->delete('clear', 'PanierController::clear');                             // DELETE /api/panier/clear
     });
 
 });

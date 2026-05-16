@@ -28,9 +28,21 @@ class AuthFilter implements FilterInterface
             $key = getenv('JWT_SECRET');
             $decoded = JWT::decode($token, new Key($key, 'HS256'));
             
-            // On peut ajouter les infos du user dans la requête pour les récupérer dans le controller
+            // Stockage de l'objet décodé complet par sécurité
             $request->user = $decoded; 
+
+            // --- LA CORRECTION ICI ---
+            // On extrait l'ID de l'utilisateur du token (souvent 'id' ou 'uid' ou 'sub')
+            // Adapte 'id' si dans ton JWT le paramètre s'appelle autrement (ex: $decoded->uid)
+            $userId = $decoded->id ?? $decoded->uid ?? $decoded->sub ?? 0;
+
+            if ($userId > 0) {
+                // On injecte l'ID dans un Header pour que le contrôleur le lise à coup sûr
+                $request->setHeader('X-User-Id', (string) $userId);
+            }
             
+            return $request; // On retourne la requête modifiée
+
         } catch (\Exception $e) {
             return Services::response()
                 ->setStatusCode(401)

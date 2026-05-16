@@ -1,4 +1,6 @@
-<?php namespace App\Models;
+<?php
+
+namespace App\Models;
 use CodeIgniter\Model;
  
 class AdresseModel extends Model
@@ -6,8 +8,10 @@ class AdresseModel extends Model
     protected $table         = 'adresses';
     protected $primaryKey    = 'id';
     protected $useTimestamps = true;
+    
+    // Ajout de latitude et longitude dans les champs autorisés
     protected $allowedFields = [
-        'id_user','libelle','adresse','ville','is_default'
+        'id_user', 'libelle', 'adresse', 'ville', 'latitude', 'longitude', 'is_default'
     ];
  
     // Toutes les adresses d'un user

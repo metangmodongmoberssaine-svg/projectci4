@@ -42,7 +42,11 @@ export default function LoginContent() {
 
                 if (userRole === 'admin') {
                     navigate('/admin');
-                } else {
+                } 
+                else if(userRole === 'client') {
+                    navigate('/user');
+                }
+                else {
                     navigate('/'); // Redirection client vers l'accueil
                 }
             } else {
