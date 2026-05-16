@@ -2,7 +2,7 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
 
 /**
- * 💡 STRATÉGIE PROXY :
+ *  STRATÉGIE PROXY :
  * On utilise '/api' comme URL de base. 
  * Le proxy configuré dans vite.config.ts interceptera ces requêtes
  * et les redirigera vers http://localhost:8080.
@@ -42,7 +42,7 @@ api.interceptors.request.use(
 );
 
 /**
- * 🚨 INTERCEPTEUR DE RÉPONSE
+ *  INTERCEPTEUR DE RÉPONSE
  * Gestion globale des erreurs (ex: session expirée)
  */
 api.interceptors.response.use(
