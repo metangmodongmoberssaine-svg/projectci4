@@ -14,6 +14,7 @@ import Promotion from './pages/admin/Promotions/Promotion'
 import Profilte from './pages/admin/Profilte'
 import Notification from './pages/admin/Notification'
 import Livreur from './pages/admin/Livreur'
+import ContactMessageAdmin from './pages/admin/ContactMessageAdmin'
 function App() {
 
   return (
@@ -34,6 +35,7 @@ function App() {
             <Route path="profile" element={<Profilte />} />
             <Route path="notifications" element={<Notification />} />
             <Route path="livreurs" element={<Livreur />} />
+            <Route path="contact-admin" element={<ContactMessageAdmin />} />
         </Route>
 
       </Routes>
