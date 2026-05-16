@@ -58,21 +58,34 @@ class LivreurController extends ResourceController
             return $this->fail($this->validator->getErrors());
         }
 
-        $tempPassword = str_pad(random_int(0, 99999), 5, '0', STR_PAD_LEFT);
+        // 1. Génération du code d'accès à 5 chiffres
+        $tempPassword = str_pad((string)random_int(0, 99999), 5, '0', STR_PAD_LEFT);
 
+        // 2. Préparation des données requises par le UserModel (sauf password pour éviter le conflit des 8 caractères)
         $data = [
             'nom'         => $this->request->getVar('nom'),
             'prenom'      => $this->request->getVar('prenom'),
             'email'       => $this->request->getVar('email'),
             'telephone'   => $this->request->getVar('telephone'),
             'role'        => 'livreur',
-            'password'    => password_hash($tempPassword, PASSWORD_BCRYPT),
+            'password'    => 'TEMP_PASSWORD_BYPASS', // Valeur temporaire pour passer la validation 'required'
             'is_verified' => 1,
             'is_actif'    => 1,
-            'created_at'  => date('Y-m-d H:i:s'),
         ];
 
-        if ($this->model->insert($data)) {
+        // On désactive temporairement la validation stricte du modèle pour forcer l'insertion du profil de base
+        if ($this->model->skipValidation(true)->insert($data)) {
+            $livreurId = $this->model->getInsertID();
+
+            // 3. On génère le hash parfait et on met à jour directement en BDD via le Query Builder 
+            // pour contourner le hook 'beforeInsert/beforeUpdate' du modèle et éviter le double hachage.
+            $hashedPassword = password_hash($tempPassword, PASSWORD_BCRYPT);
+            
+            $this->model->db()->table('users')
+                 ->where('id', $livreurId)
+                 ->update(['password' => $hashedPassword]);
+
+            // 4. Envoi de l'email avec le code brut à 5 chiffres
             $this->sendCredentialsEmail($data['email'], $data['nom'], $tempPassword);
 
             return $this->respondCreated([
@@ -103,14 +116,17 @@ class LivreurController extends ResourceController
      */
     public function update($id = null)
     {
-        // getRawInput() est indispensable pour récupérer les données en PUT
         $input = $this->request->getRawInput();
         
-        // Sécurité : vérifier que l'ID existe ET est bien un livreur
         $exists = $this->model->where(['id' => $id, 'role' => 'livreur'])->first();
-        
         if (!$exists) {
             return $this->failNotFound("Livreur inexistant.");
+        }
+
+        // Si le mot de passe est modifié, on laisse le modèle gérer s'il fait plus de 8 caractères,
+        // sinon on supprime le champ pour ne pas écraser l'ancien
+        if (isset($input['password']) && empty($input['password'])) {
+            unset($input['password']);
         }
 
         if ($this->model->update($id, $input)) {
