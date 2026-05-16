@@ -18,6 +18,7 @@ import ContactMessageAdmin from './pages/admin/ContactMessageAdmin'
 import UserDashboard from './pages/UserDahboard'
 import NotificationUser from './pages/user/NotificationUser'
 import Adresse from './pages/user/Adresse'
+import Panier from './pages/user/Panier'
 function App() {
 
   return (
@@ -45,6 +46,7 @@ function App() {
             <Route path="profile" element={<Profilte />} />
             <Route path="notifications" element={<NotificationUser />} />
             <Route path="adresse" element={<Adresse />} />
+            <Route path="panier" element={<Panier />} />
         </Route>
       </Routes>
     </Router>

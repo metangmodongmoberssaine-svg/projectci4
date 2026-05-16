@@ -4,13 +4,10 @@ import {
   MdLogout,
   MdAccountCircle,
   MdMenu,
-  MdDashboard,
-  MdCategory,
   MdFastfood,
-  MdLocalOffer,
   MdNotifications,
-  MdDeliveryDining,
   MdContactMail,
+  MdShoppingCart, // Utilisé pour l'adresse
 } from "react-icons/md";
 import AuthService from "../services/AuthService";
 
@@ -132,7 +129,7 @@ const SideBarUser: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) =>
         {/* Navigation */}
         <ul className="nav nav-pills flex-column mb-auto">
 
-
+          {/* Notifications */}
           <li className="nav-item">
             <NavLink
               to="/user/notifications"
@@ -148,21 +145,38 @@ const SideBarUser: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) =>
             </NavLink>
           </li>
 
+          {/* Mes Adresses */}
           <li className="nav-item">
             <NavLink
               to="/user/adresse"
               style={navLinkStyle}
               className="nav-link-custom"
-              data-label="Notifications"
+              data-label="Mes Adresses"
             >
-              <MdNotifications
+              <MdContactMail 
                 size={22}
                 className={isCollapsed ? "" : "me-3"}
               />
               {!isCollapsed && <span className="fw-bold">Mes Adresses</span>}
             </NavLink>
           </li>
+          {/* Mes paniers */}
+          <li className="nav-item">
+            <NavLink
+              to="/user/panier"
+              style={navLinkStyle}
+              className="nav-link-custom"
+              data-label="Mes Paniers"
+            >
+              <MdShoppingCart 
+                size={22}
+                className={isCollapsed ? "" : "me-3"}
+              />
+              {!isCollapsed && <span className="fw-bold">shopping</span>}
+            </NavLink>
+          </li>
 
+          {/* Mon Profil */}
           <li className="nav-item">
             <NavLink
               to="/user/profile"
