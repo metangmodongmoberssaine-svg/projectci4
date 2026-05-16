@@ -31,6 +31,22 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function($routes) 
     });
 
     /**
+     * Gestion des Contacts (Public & Admin)
+     */
+    $routes->group('contact', function($routes) {
+        // Route publique pour envoyer un message
+        $routes->post('send', 'ContactController::sendPublicMessage');
+    });
+
+    $routes->group('admin/contacts', ['filter' => 'jwt'], function($routes) {
+        // Routes d'administration protégées par JWT
+        $routes->get('/', 'ContactController::index');                               // Lister avec pagination & filtres
+        $routes->patch('mark-read/(:num)', 'ContactController::toggleReadStatus/$1'); // Inverser le statut (Lu/Non lu)
+        $routes->patch('mark-all-read', 'ContactController::markAllAsRead');         // Tout marquer comme lu
+        $routes->post('reply/(:num)', 'ContactController::reply/$1');                 // Répondre à un message
+    });
+
+    /**
      * Gestion des Livreurs
      * FIX : '' au lieu de '/' supprime le double slash api/livreurs//4 
      * qui causait la 404 sur PUT et DELETE.
