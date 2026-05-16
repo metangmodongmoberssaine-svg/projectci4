@@ -15,6 +15,9 @@ import Profilte from './pages/admin/Profilte'
 import Notification from './pages/admin/Notification'
 import Livreur from './pages/admin/Livreur'
 import ContactMessageAdmin from './pages/admin/ContactMessageAdmin'
+import UserDashboard from './pages/UserDahboard'
+import NotificationUser from './pages/user/NotificationUser'
+import Adresse from './pages/user/Adresse'
 function App() {
 
   return (
@@ -38,6 +41,11 @@ function App() {
             <Route path="contact-admin" element={<ContactMessageAdmin />} />
         </Route>
 
+        <Route path="/user/*" element={<UserDashboard />}>
+            <Route path="profile" element={<Profilte />} />
+            <Route path="notifications" element={<NotificationUser />} />
+            <Route path="adresse" element={<Adresse />} />
+        </Route>
       </Routes>
     </Router>
   )

@@ -1,22 +1,26 @@
-// src/services/NotificationService.ts
-// src/services/NotificationService.ts
 import api from "./Api";
 import { NotificationResponse } from "../models/NotificationModel";
+
+interface NotificationFilters {
+    page?: number;
+    perPage?: number;
+    status?: 'all' | 'unread' | 'read' | string;
+}
 
 class NotificationService {
     
     /**
      * Récupérer toutes les notifications de l'utilisateur connecté
-     * (Inclut les notifications directes et les diffusions/broadcast)
      */
-    async getMyNotifications(): Promise<NotificationResponse> {
-        const response = await api.get<NotificationResponse>('/notifications');
+    async getMyNotifications(filters?: NotificationFilters): Promise<NotificationResponse> {
+        const response = await api.get<NotificationResponse>('/notifications', {
+            params: filters
+        });
         return response.data;
     }
 
     /**
      * Marquer une seule notification comme lue
-     * @param id - ID de la notification
      */
     async markAsRead(id: number): Promise<{ status: boolean; message: string }> {
         const response = await api.patch(`notifications/read/${id}`);
@@ -33,8 +37,6 @@ class NotificationService {
 
     /**
      * [Admin] Envoyer une notification
-     * @param data - { titre, message, target, type }
-     * target peut être 'all' pour tout le monde ou l'ID numérique d'un utilisateur
      */
     async sendNotification(data: { 
         titre: string; 

@@ -31,6 +31,17 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function($routes) 
     });
 
     /**
+     * Gestion des Adresses (Protégée par JWT)
+     */
+    $routes->group('adresses', ['filter' => 'jwt'], function($routes) {
+        $routes->get('/', 'AdresseController::index');                // GET    /api/adresses (Lister ses adresses)
+        $routes->post('/', 'AdresseController::store');               // POST   /api/adresses (Ajouter une adresse)
+        $routes->put('(:num)', 'AdresseController::update/$1');        // PUT    /api/adresses/{id} (Modifier)
+        $routes->delete('(:num)', 'AdresseController::delete/$1');     // DELETE /api/adresses/{id} (Supprimer)
+        $routes->patch('(:num)/default', 'AdresseController::setDefault/$1'); // PATCH /api/adresses/{id}/default (Définir par défaut)
+    });
+
+    /**
      * Gestion des Contacts (Public & Admin)
      */
     $routes->group('contact', function($routes) {
