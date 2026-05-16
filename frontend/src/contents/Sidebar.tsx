@@ -10,6 +10,7 @@ import {
   MdLocalOffer,
   MdNotifications,
   MdDeliveryDining,
+  MdContactMail,
 } from "react-icons/md";
 import AuthService from "../services/AuthService";
 
@@ -190,6 +191,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
               />
 
               {!isCollapsed && <span className="fw-bold">Livreurs</span>}
+            </NavLink>
+          </li>
+
+          <li className="nav-item">
+            <NavLink
+              to="/admin/contact-admin"
+              style={navLinkStyle}
+              className="nav-link-custom"
+              data-label="Contact"
+            >
+              <MdContactMail size={22} className={isCollapsed ? "" : "me-3"} />
+
+              {!isCollapsed && <span className="fw-bold">Contact</span>}
             </NavLink>
           </li>
 
