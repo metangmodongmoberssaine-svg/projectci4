@@ -135,6 +135,7 @@ public function update(int $id)
             'error'   => $e->getMessage() // À retirer en production pour la sécurité
         ]);
     }
+    // 
 }
 
     // DELETE /api/promotions/{id}
