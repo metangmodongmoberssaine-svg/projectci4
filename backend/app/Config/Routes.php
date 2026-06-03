@@ -36,7 +36,7 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function($routes) 
     $routes->group('adresses', ['filter' => 'jwt'], function($routes) {
         $routes->get('/', 'AdresseController::index');                               // GET    /api/adresses (Lister ses adresses)
         $routes->post('/', 'AdresseController::store');                              // POST   /api/adresses (Ajouter une adresse)
-        $routes->put('(:num)', 'AdresseController::update/$1');                       // PUT    /api/adresses/{id} (Modifier)
+        $routes->put('(:num)', 'AdresseController::update/$1');                      // PUT    /api/adresses/{id} (Modifier)
         $routes->delete('(:num)', 'AdresseController::delete/$1');                    // DELETE /api/adresses/{id} (Supprimer)
         $routes->patch('(:num)/default', 'AdresseController::setDefault/$1');        // PATCH  /api/adresses/{id}/default (Définir par défaut)
     });
@@ -120,7 +120,6 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function($routes) 
 
     /**
      * Gestion du Panier (Protégée par JWT)
-     * Correction de la résolution d'URI pour CI4
      */
     $routes->group('panier', ['filter' => 'jwt'], function($routes) {
         $routes->get('/', 'PanierController::index');                                    // GET    /api/panier
@@ -128,6 +127,34 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function($routes) 
         $routes->put('item/(:num)', 'PanierController::update/$1');                     // PUT    /api/panier/item/{id}
         $routes->delete('item/(:num)', 'PanierController::remove/$1');                  // DELETE /api/panier/item/{id}
         $routes->delete('clear', 'PanierController::clear');                             // DELETE /api/panier/clear
+    });
+
+    /**
+     * Gestion des Commandes (Protégée par JWT & Admin)
+     */
+    $routes->group('commandes', ['filter' => 'jwt'], function($routes) {
+        $routes->get('/', 'CommandeController::index');                                  // GET    /api/commandes (Historique client)
+        $routes->get('(:num)', 'CommandeController::show/$1');                           // GET    /api/commandes/{id} (Détail d'une commande)
+        $routes->post('/', 'CommandeController::create');                                // POST   /api/commandes (Créer commande + Campay)
+        $routes->post('(:num)/annuler', 'CommandeController::annuler/$1');               // POST   /api/commandes/{id}/annuler (Annulation client)
+        $routes->patch('(:num)/statut', 'CommandeController::changerStatut/$1');          // PATCH  /api/commandes/{id}/statut (Admin change l'état)
+    });
+
+    /**
+     * Gestion des Paiements Campay
+     * URLs correspondantes : /api/payment/...
+     */
+    $routes->group('payment', function($routes) {
+        // Le webhook doit rester STRICTEMENT public pour recevoir les réponses asynchrones de Campay
+        $routes->post('webhook', 'CampayController::webhook');         // POST /api/payment/webhook
+
+        // Toutes les autres actions de paiement nécessitent une authentification JWT
+        $routes->group('', ['filter' => 'jwt'], function($routes) {
+            $routes->post('initiate', 'CampayController::initiate');       // POST /api/payment/initiate
+            $routes->post('collect', 'CampayController::collectBrute');     // POST /api/payment/collect
+            $routes->post('withdraw', 'CampayController::withdrawAdmin');   // POST /api/payment/withdraw
+            $routes->get('status/(:any)', 'CampayController::status/$1');   // GET  /api/payment/status/{reference}
+        });
     });
 
 });

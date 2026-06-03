@@ -3,6 +3,7 @@ import PanierService from '../../services/PanierService';
 import { RepasService } from '../../services/RepasService'; 
 import { PanierData, PanierItem } from '../../models/PanierModel';
 import { Repas as IRepas } from '../../models/RepasModel'; 
+import CommandeService from '../../services/CommandeService';
 
 export default function Panier() {
     // États du Panier
@@ -11,6 +12,11 @@ export default function Panier() {
     const [error, setError] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const perPage = 6; 
+
+    // États pour les informations de livraison et commande
+    const [isOrdering, setIsOrdering] = useState<boolean>(false);
+    const [adresseLivraison, setAdresseLivraison] = useState<string>("");
+    const [codePromo, setCodePromo] = useState<string>("");
 
     // États de la liste des repas réels venant de la BD
     const [repasListe, setRepasListe] = useState<IRepas[]>([]);
@@ -58,20 +64,26 @@ export default function Panier() {
         }
     };
 
-    // OPTIMISATION : Charger la liste des repas UNE SEULE FOIS au montage du composant
     useEffect(() => {
         fetchRepasDisponibles();
     }, []);
 
-    // Charger le panier à chaque fois que la page courante change
     useEffect(() => {
         fetchPanier(currentPage);
     }, [currentPage]);
 
-    // OPTIMISATION : Utilisation de useMemo pour éviter de recalculer le tableau des catégories à chaque rendu
     const categories = useMemo(() => {
         return ["Toutes", ...Array.from(new Set(repasListe.map(r => r.categorie || "Autres").filter(Boolean)))];
     }, [repasListe]);
+
+    // Calcul du total du panier de manière dynamique
+    const totalPanier = useMemo(() => {
+        if (!panier || !panier.items) return 0;
+        return panier.items.reduce((acc, item) => {
+            const prix = typeof item.prix_unitaire === 'string' ? parseFloat(item.prix_unitaire) : item.prix_unitaire || 0;
+            return acc + (prix * (item.quantite || 0));
+        }, 0);
+    }, [panier]);
 
     // Ajouter un repas au panier
     const handleAddToCart = async (repasId: number) => {
@@ -102,14 +114,12 @@ export default function Panier() {
         }
     };
 
-    // Modifier la quantité (+ ou - ou saisie directe)
+    // Modifier la quantité
     const handleUpdateQuantity = async (itemId: number, newQty: number) => {
-        // Si l'utilisateur demande 0, on lance la suppression
         if (newQty === 0) {
             await handleRemoveItem(itemId);
             return;
         }
-
         if (newQty < 1 || isNaN(newQty)) return;
 
         try {
@@ -136,7 +146,51 @@ export default function Panier() {
         }
     };
 
-    // Filtrage et Tri dynamique combiné mémoïsé pour de meilleures performances
+    // Passer la commande en envoyant les paramètres attendus par CommandeService.create()
+    const handleCreateCommande = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!adresseLivraison.trim()) {
+            alert("Veuillez renseigner une adresse de livraison valide.");
+            return;
+        }
+
+        try {
+            setIsOrdering(true);
+            
+            // Préparation des données d'entrée conformes à CreateCommandeInput
+            const payload = {
+                adresse: adresseLivraison.trim(),
+                code_promo: codePromo.trim() !== "" ? codePromo.trim() : undefined
+            };
+
+            const res = await CommandeService.create(payload);
+
+            if (res.status) {
+                alert(`Commande passée avec succès !\nRéférence : ${res.reference}`);
+                
+                // Si le backend renvoie des infos d'initialisation de paiement Campay (Mtn / Orange Money)
+                if (res.checkout) {
+                    console.log("Paiement push de déclenché :", res.checkout);
+                }
+
+                // Réinitialisation des états locaux
+                setPanier(null); 
+                setAdresseLivraison("");
+                setCodePromo("");
+                setCurrentPage(1);
+            } else {
+                alert(res.message || "Impossible de finaliser la commande.");
+            }
+        } catch (err) {
+            console.error("Erreur lors de la commande :", err);
+            alert("Une erreur est survenue lors de la validation de votre commande.");
+        } finally {
+            setIsOrdering(false);
+        }
+    };
+
+    // Filtrage et Tri dynamique combiné mémoïsé
     const filteredRepasListe = useMemo(() => {
         return repasListe
             .filter((repas) => {
@@ -182,14 +236,13 @@ export default function Panier() {
                     background: #cbd5e1;
                     border-radius: 4px;
                 }
-                /* Masquer les flèches par défaut des inputs de type number */
                 .no-spinners::-webkit-outer-spin-button,
                 .no-spinners::-webkit-inner-spin-button {
-                    -webkit-appearance: none;
+                    webkit-appearance: none;
                     margin: 0;
                 }
                 .no-spinners {
-                    -moz-appearance: textfield;
+                    moz-appearance: textfield;
                 }
             `}</style>
 
@@ -208,6 +261,7 @@ export default function Panier() {
                             className="btn btn-outline-danger btn-sm rounded-pill px-4 py-2"
                             style={{ fontWeight: 600 }}
                             onClick={handleClearCart}
+                            disabled={isOrdering}
                         >
                             <i className="bi bi-trash me-1"></i>Vider le panier
                         </button>
@@ -275,7 +329,7 @@ export default function Panier() {
                         </div>
                     </div>
 
-                    {/* ================= COLONNE GAUCHE : LA BOUTIQUE RECONFIGURÉE EN GRILLE 4X4 / 3X3 ================= */}
+                    {/* ================= COLONNE GAUCHE : LA BOUTIQUE ================= */}
                     <div className="col-xl-9 col-lg-8 col-12">
                         <div className="p-3 bg-white shadow-sm rounded-4 mb-4 border-0">
                             
@@ -292,7 +346,6 @@ export default function Panier() {
                                     Aucun plat ne correspond à vos critères de filtrage.
                                 </div>
                             ) : (
-                                /* Modification de la grille : row-cols-md-3 (3 par 3) et row-cols-xl-4 (4 par 4) */
                                 <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-3">
                                     {filteredRepasListe.map((repas) => {
                                         const imageSrc = repas.photo ? `${URL_BACKEND}/${repas.photo}` : 'https://via.placeholder.com/150?text=AfricaFood';
@@ -333,6 +386,7 @@ export default function Panier() {
                                                                 className="btn btn-sm btn-primary rounded-pill d-flex align-items-center gap-1 shadow-none"
                                                                 style={{ fontWeight: 600, fontSize: '11px', paddingLeft: '10px', paddingRight: '10px', paddingTop: '4px', paddingBottom: '4px' }}
                                                                 onClick={() => repas.id && handleAddToCart(repas.id)}
+                                                                disabled={isOrdering}
                                                             >
                                                                 <i className="bi bi-cart-plus-fill"></i>+
                                                             </button>
@@ -347,7 +401,7 @@ export default function Panier() {
                         </div>
                     </div>
 
-                    {/* ================= COLONNE DROITE : PANIER AJUSTÉ ================= */}
+                    {/* ================= COLONNE DROITE : PANIER + FORMULAIRE DE COMMANDE ================= */}
                     <div className="col-xl-3 col-lg-4 col-12">
                         <div className="p-3 bg-white shadow-sm rounded-4 border-0" style={{ position: 'sticky', top: '24px' }}>
                             <h3 className="text-af-black mb-3 fs-6 fw-bold border-bottom pb-2" style={{ fontWeight: 700 }}>
@@ -363,22 +417,20 @@ export default function Panier() {
                                 <div className="text-center py-4 bg-light rounded-4 border-0">
                                     <i className="bi bi-cart-x text-muted mb-1" style={{ fontSize: '2rem', display: 'block' }}></i>
                                     <h5 className="mt-1 text-af-black fw-bold" style={{ fontSize: '14px' }}>Votre panier est vide</h5>
-                                    <p className="text-muted small px-2 mb-0" style={{ fontSize: '11.5px' }}>Sélectionnez des plats pour les envoyer ici.</p>
+                                    <p className="text-muted small px-2 mb-0" style={{ fontSize: '11.5px' }}>Sélectionnez des plats pour les ajouter ici.</p>
                                 </div>
                             ) : (
                                 <>
-                                    {/* En-tête des colonnes du panier */}
                                     <div className="d-flex justify-content-between text-muted small fw-bold px-1 mb-2" style={{ fontSize: '10.5px' }}>
                                         <span style={{ width: '42%' }}>PRODUIT</span>
                                         <span style={{ width: '33%' }} className="text-center">QTE</span>
                                         <span style={{ width: '25%' }} className="text-end">P.U</span>
                                     </div>
 
-                                    <div className="mb-3 custom-scrollbar" style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '2px' }}>
+                                    <div className="mb-3 custom-scrollbar" style={{ maxHeight: '240px', overflowY: 'auto', paddingRight: '2px' }}>
                                         {panier.items.map((item: PanierItem) => (
                                             <div key={item.id} className="d-flex align-items-center justify-content-between p-2 mb-2 bg-light rounded-3 border-0">
                                                 
-                                                {/* Colonne Produit (Image + Nom) */}
                                                 <div className="d-flex align-items-center" style={{ width: '42%' }}>
                                                     <img 
                                                         src={item.photo ? `${URL_BACKEND}/${item.photo}` : 'https://via.placeholder.com/100?text=AfricaFood'} 
@@ -393,13 +445,14 @@ export default function Panier() {
                                                     </div>
                                                 </div>
 
-                                                {/* Colonne Quantité */}
                                                 <div className="d-flex align-items-center justify-content-center" style={{ width: '33%' }}>
                                                     <div className="input-group input-group-sm bg-white rounded-2 border" style={{ width: '76px', overflow: 'hidden' }}>
                                                         <button 
+                                                            type="button"
                                                             className="btn btn-link text-secondary p-0 border-0 text-decoration-none shadow-none" 
                                                             style={{ width: '20px', fontSize: '13px', fontWeight: 'bold' }}
                                                             onClick={() => handleUpdateQuantity(item.id, item.quantite - 1)}
+                                                            disabled={isOrdering}
                                                         >-</button>
                                                         
                                                         <input 
@@ -409,15 +462,14 @@ export default function Panier() {
                                                             className="form-control text-center p-0 border-0 fw-bold bg-transparent shadow-none"
                                                             style={{ fontSize: '11.5px', height: '24px' }}
                                                             value={item.quantite === 0 ? "" : item.quantite}
+                                                            disabled={isOrdering}
                                                             onChange={(e) => {
                                                                 const inputValue = e.target.value;
-                                                                
                                                                 if (inputValue === "") {
                                                                     const updatedItems = panier.items.map(i => i.id === item.id ? { ...i, quantite: 0 } : i);
                                                                     setPanier({ ...panier, items: updatedItems });
                                                                     return;
                                                                 }
-
                                                                 const val = parseInt(inputValue, 10);
                                                                 if (!isNaN(val) && val >= 0) {
                                                                     handleUpdateQuantity(item.id, val);
@@ -432,46 +484,95 @@ export default function Panier() {
                                                         />
 
                                                         <button 
+                                                            type="button"
                                                             className="btn btn-link text-secondary p-0 border-0 text-decoration-none shadow-none" 
                                                             style={{ width: '20px', fontSize: '13px', fontWeight: 'bold' }}
                                                             onClick={() => handleUpdateQuantity(item.id, (item.quantite || 0) + 1)}
+                                                            disabled={isOrdering}
                                                         >+</button>
                                                     </div>
                                                 </div>
 
-                                                {/* Colonne Prix Unitaire */}
                                                 <div className="d-flex align-items-center justify-content-end gap-1" style={{ width: '25%' }}>
                                                     <span className="text-af-black fw-semibold text-end" style={{ fontSize: '11px' }}>
                                                         {parseFloat((item.prix_unitaire ?? 0).toString()).toLocaleString()} F
                                                     </span>
                                                     <button 
+                                                        type="button"
                                                         className="btn btn-sm text-danger p-0 border-0 bg-transparent shadow-none ms-1"
                                                         onClick={() => handleRemoveItem(item.id)}
+                                                        disabled={isOrdering}
                                                         title="Retirer du panier"
                                                     >
                                                         <i className="bi bi-trash" style={{ fontSize: '13px' }}></i>
                                                     </button>
                                                 </div>
-
                                             </div>
                                         ))}
                                     </div>
 
-                                    <div className="border-top pt-3">
-                                        <div className="d-flex justify-content-between align-items-center mb-3">
-                                            <span className="text-muted small" style={{ fontWeight: 500 }}>Total :</span>
-                                            <span className="text-af-orange h6 mb-0" style={{ fontWeight: 800, fontSize: '16px' }}>
-                                                {parseFloat((panier.total ?? 0).toString()).toLocaleString()} F
-                                            </span>
-                                        </div>
-                                        <button className="btn btn-primary w-100 rounded-3 py-2 fw-bold shadow-none" style={{ fontSize: '13px' }}>
-                                            Passer la commande <i className="bi bi-arrow-right ms-1"></i>
-                                        </button>
+                                    {/* --- ZONE D'AFFICHAGE DU TOTAL --- */}
+                                    <div className="d-flex justify-content-between align-items-center bg-light p-2 rounded-3 mb-3 border">
+                                        <span className="text-af-black fw-bold" style={{ fontSize: '13px' }}>Total global :</span>
+                                        <span className="text-af-orange fw-bolder" style={{ fontSize: '15px' }}>{totalPanier.toLocaleString()} F</span>
                                     </div>
+
+                                    {/* FORMULAIRE DE LIVRAISON REQUIS POUR LA CREATION */}
+                                    <form onSubmit={handleCreateCommande} className="border-top pt-3 mt-2">
+                                        <div className="mb-2">
+                                            <label className="form-label text-af-black fw-bold mb-1" style={{ fontSize: '12px' }}>
+                                                Adresse de livraison <span className="text-danger">*</span>
+                                            </label>
+                                            <input 
+                                                type="text"
+                                                className="form-control form-control-sm"
+                                                placeholder="Ex: Douala, Akwa, Rue..."
+                                                value={adresseLivraison}
+                                                onChange={(e) => setAdresseLivraison(e.target.value)}
+                                                style={{ fontSize: '12.5px', borderRadius: '6px' }}
+                                                required
+                                                disabled={isOrdering}
+                                            />
+                                        </div>
+
+                                        <div className="mb-3">
+                                            <label className="form-label text-af-black fw-bold mb-1" style={{ fontSize: '12px' }}>
+                                                Code promo (Optionnel)
+                                            </label>
+                                            <input 
+                                                type="text"
+                                                className="form-control form-control-sm"
+                                                placeholder="Ex: FREEAFRICA"
+                                                value={codePromo}
+                                                onChange={(e) => setCodePromo(e.target.value)}
+                                                style={{ fontSize: '12.5px', borderRadius: '6px' }}
+                                                disabled={isOrdering}
+                                            />
+                                        </div>
+
+                                        <button 
+                                            type="submit"
+                                            className="btn btn-sm btn-primary w-100 rounded-pill py-2 d-flex align-items-center justify-content-center gap-2 text-uppercase"
+                                            style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.5px' }}
+                                            disabled={isOrdering}
+                                        >
+                                            {isOrdering ? (
+                                                <>
+                                                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                                    Traitement...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <i className="bi bi-credit-card-2-back-fill"></i> Commander • {totalPanier.toLocaleString()} F
+                                                </>
+                                            )}
+                                        </button>
+                                    </form>
                                 </>
                             )}
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>

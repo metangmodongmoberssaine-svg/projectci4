@@ -59,4 +59,25 @@ class RepasModel extends Model
     {
         return $this->like('nom', $terme)->findAll();
     }
+
+    /**
+     * Décrémente le stock d'un repas après une commande
+     */
+    public function decrementStock(int $id, int $quantite) 
+    {
+        // On récupère le repas actuel
+        $repas = $this->find($id);
+        
+        if ($repas) {
+            // On calcule le nouveau stock
+            $nouveauStock = (int)$repas['quantite'] - $quantite;
+            
+            // On met à jour la base de données
+            return $this->update($id, [
+                'quantite' => max(0, $nouveauStock) // Empêche de passer en dessous de 0
+            ]);
+        }
+        
+        return false;
+    }
 }

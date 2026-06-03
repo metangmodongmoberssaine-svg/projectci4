@@ -1,108 +1,179 @@
-<?php namespace App\Controllers\Api;
+<?php
+
+namespace App\Controllers\Api;
+
 use App\Controllers\BaseController;
-use App\Models\{CommandeModel,CommandeRepasModel,PanierModel,PanierRepasModel,PromotionModel,RepasModel};
- 
+use App\Services\CampayService;
+use App\Models\{
+    CommandeModel,
+    CommandeRepasModel,
+    PanierModel,
+    PanierRepasModel,
+    PromotionModel,
+    RepasModel,
+    UserModel
+};
+use Exception;
+
 class CommandeController extends BaseController
 {
     private int $userId;
+    private CampayService $campayService;
+
     public function __construct()
     {
-        $this->userId = (int) service('request')->userId;
-    }
- 
-    // GET /api/commandes
-    public function index()
-    {
-        $commandes = (new CommandeModel())->getByUser($this->userId);
-        return $this->response->setJSON(['status'=>true,'data'=>$commandes]);
-    }
- 
-    // GET /api/commandes/{id}
-    public function show(int $id)
-    {
-        $commande = (new CommandeModel())->getDetail($id);
-        if (!$commande || $commande['id_user'] !== $this->userId) {
-            return $this->response->setStatusCode(404)->setJSON([
-                'status'=>false,'message'=>'Commande introuvable.'
-            ]);
+        $request = service('request');
+        $this->userId = 0;
+
+        // Récupération sécurisée de l'ID utilisateur
+        if ($request->hasHeader('X-User-Id')) {
+            $this->userId = (int) $request->header('X-User-Id')->getValue();
+        } else {
+            $this->userId = (int) ($request->getVar('userId') ?? 0);
         }
-        return $this->response->setJSON(['status'=>true,'data'=>$commande]);
-    }
- 
-    // POST /api/commandes
-    public function create()
-    {
-        $panier = (new PanierModel())->getWithItems($this->userId);
-        if (empty($panier['items'])) {
-            return $this->response->setStatusCode(400)->setJSON([
-                'status'=>false,'message'=>'Votre panier est vide.'
-            ]);
-        }
-        $total   = $panier['total'];
-        $remise  = 0;
-        $promoId = null;
-        // Appliquer code promo si fourni
-        $code = $this->request->getVar('code_promo');
-        if ($code) {
-            $promoModel = new PromotionModel();
-            $promo = $promoModel->findValidCode($code);
-            if ($promo) {
-                $remise  = $promoModel->calculerRemise($promo, $total);
-                $promoId = $promo['id'];
+
+        if ($this->userId === 0) {
+            $authHeader = $request->getServer('HTTP_AUTHORIZATION') ?? $request->header('Authorization')?->getValue();
+            if (!empty($authHeader) && preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+                $token = $matches[1];
+                try {
+                    $tokenParts = explode('.', $token);
+                    if (isset($tokenParts[1])) {
+                        $payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $tokenParts[1])), true);
+                        $this->userId = (int) ($payload['id'] ?? $payload['userId'] ?? $payload['uid'] ?? 0);
+                    }
+                } catch (Exception $e) {
+                    log_message('error', "[CommandeController] Erreur décodage token : " . $e->getMessage());
+                }
             }
         }
-        // Créer la commande
-        $commandeModel = new CommandeModel();
-        $commandeId    = $commandeModel->insert([
-            'id_user'           => $this->userId,
-            'id_promotion'      => $promoId,
-            'adresse_livraison' => $this->request->getVar('adresse'),
-            'montant_total'     => $total - $remise,
-            'montant_remise'    => $remise,
-        ], true);
-        // Copier les items du panier dans commande_repas
-        $cmdRepasModel = new CommandeRepasModel();
-        foreach ($panier['items'] as $item) {
-            $cmdRepasModel->insert([
-                'id_commande'   => $commandeId,
-                'id_repas'      => $item['id_repas'],
-                'quantite'      => $item['quantite'],
-                'prix_snapshot' => $item['prix_unitaire'],
-            ]);
-            // Décrémenter le stock
-            (new RepasModel())->decrementStock($item['id_repas'], $item['quantite']);
+
+        $this->campayService = new CampayService();
+    }
+
+    public function index()
+    {
+        if (empty($this->userId)) {
+            return $this->response->setStatusCode(401)->setJSON(['status' => false, 'message' => 'Non authentifié.']);
         }
-        // Vider le panier
-        (new PanierRepasModel())->clearPanier($panier['id']);
-        return $this->response->setStatusCode(201)->setJSON([
-            'status'=>true,'message'=>'Commande créée.','commande_id'=>$commandeId
+
+        $commandeModel = new CommandeModel();
+        $page = (int) $this->request->getVar('page') ?: 1;
+        $perPage = (int) $this->request->getVar('per_page') ?: 10;
+        $offset = ($page - 1) * $perPage;
+
+        $commandes = $commandeModel->where('id_user', $this->userId)->orderBy('created_at', 'DESC')->findAll($perPage, $offset);
+        $totalItems = $commandeModel->where('id_user', $this->userId)->countAllResults();
+
+        return $this->response->setJSON([
+            'status' => true,
+            'data' => $commandes,
+            'pagination' => ['current_page' => $page, 'per_page' => $perPage, 'total_items' => $totalItems, 'total_pages' => (int) ceil($totalItems / $perPage) ?: 1]
         ]);
     }
- 
-    // PATCH /api/commandes/{id}/statut  [Admin]
+
+    public function show(int $id)
+    {
+        if (empty($this->userId)) return $this->response->setStatusCode(401)->setJSON(['status' => false, 'message' => 'Non autorisé.']);
+        
+        $commande = (new CommandeModel())->getDetail($id);
+        if (!$commande || $commande['id_user'] !== $this->userId) {
+            return $this->response->setStatusCode(404)->setJSON(['status' => false, 'message' => 'Commande introuvable.']);
+        }
+        return $this->response->setJSON(['status' => true, 'data' => $commande]);
+    }
+
+    public function create()
+    {
+        if (empty($this->userId)) return $this->response->setStatusCode(401)->setJSON(['status' => false, 'message' => 'Non authentifié.']);
+
+        try {
+            $panier = (new PanierModel())->getWithItems($this->userId);
+            if (empty($panier['items'])) return $this->response->setStatusCode(400)->setJSON(['status' => false, 'message' => 'Panier vide.']);
+
+            $adresse = $this->request->getVar('adresse');
+            if (empty($adresse)) return $this->response->setStatusCode(400)->setJSON(['status' => false, 'message' => 'Adresse requise.']);
+
+            $user = (new UserModel())->find($this->userId);
+            $userPhone = $user['telephone'] ?? $user['phone'] ?? null;
+            if (!$userPhone) return $this->response->setStatusCode(400)->setJSON(['status' => false, 'message' => 'Numéro de téléphone manquant.']);
+
+            // Formatage strict pour Campay (237...)
+            $userPhone = preg_replace('/[^0-9]/', '', $userPhone); // Nettoie le numéro
+            if (strlen($userPhone) === 9) $userPhone = '237' . $userPhone;
+
+            // Calcul promos
+            $total = $panier['total'];
+            $remise = 0; $promoId = null;
+            if ($code = $this->request->getVar('code_promo')) {
+                $promo = (new PromotionModel())->findValidCode($code);
+                if ($promo) {
+                    $remise = (new PromotionModel())->calculerRemise($promo, $total);
+                    $promoId = $promo['id'];
+                }
+            }
+            $montantFinal = $total - $remise;
+
+            // 1. TRANSACTION SQL
+            $db = \Config\Database::connect();
+            $db->transStart();
+            $referenceUnique = $this->campayService->generateReference('CMD');
+            
+            $commandeModel = new CommandeModel();
+            $commandeModel->insert([
+                'id_user' => $this->userId, 'id_promotion' => $promoId, 'adresse_livraison' => $adresse,
+                'montant_total' => $montantFinal, 'montant_remise' => $remise, 'reference_paiement' => $referenceUnique, 'status' => 'en_attente'
+            ]);
+            $commandeId = $commandeModel->getInsertID();
+
+            foreach ($panier['items'] as $item) {
+                (new CommandeRepasModel())->insert(['id_commande' => $commandeId, 'id_repas' => $item['id_repas'], 'quantite' => $item['quantite'], 'prix_snapshot' => $item['prix_unitaire']]);
+                (new RepasModel())->decrementStock($item['id_repas'], $item['quantite']);
+            }
+            (new PanierRepasModel())->clearPanier($panier['id']);
+            $db->transComplete();
+
+            if ($db->transStatus() === false) throw new Exception("Erreur base de données.");
+
+            // 2. APPEL API AVEC TRACE
+            $campayResult = $this->campayService->initializePayment([
+                'phone' => $userPhone, 
+                'amount' => $montantFinal, 
+                'reference' => $referenceUnique, 
+                'description' => "Commande #{$commandeId}"
+            ]);
+
+            // Log de la réponse brute pour debug
+            log_message('debug', "[CAMPAY-RESPONSE] Pour commande $commandeId : " . json_encode($campayResult));
+
+            if (isset($campayResult['success']) && $campayResult['success']) {
+                return $this->response->setStatusCode(201)->setJSON(['status' => true, 'message' => 'Commande validée.', 'commande_id' => $commandeId]);
+            } else {
+                // Log l'erreur exacte renvoyée par l'API
+                log_message('error', "[CAMPAY-FAILURE] Erreur pour commande $commandeId : " . ($campayResult['message'] ?? 'Inconnu'));
+                return $this->response->setStatusCode(400)->setJSON(['status' => false, 'message' => $campayResult['message'] ?? 'Erreur lors du paiement.']);
+            }
+
+        } catch (Exception $e) {
+            log_message('error', "[CRITICAL 500] " . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON(['status' => false, 'message' => 'Erreur serveur.']);
+        }
+    }
+
     public function changerStatut(int $id)
     {
-        $statut = $this->request->getVar('status');
-        (new CommandeModel())->changerStatut($id, $statut);
-        return $this->response->setJSON(['status'=>true,'message'=>'Statut mis à jour.']);
+        (new CommandeModel())->changerStatut($id, $this->request->getVar('status'));
+        return $this->response->setJSON(['status' => true, 'message' => 'Statut mis à jour.']);
     }
- 
-    // POST /api/commandes/{id}/annuler
+
     public function annuler(int $id)
     {
+        if (empty($this->userId)) return $this->response->setStatusCode(401)->setJSON(['status' => false]);
         $commande = (new CommandeModel())->find($id);
-        if (!$commande || $commande['id_user'] !== $this->userId) {
-            return $this->response->setStatusCode(404)->setJSON([
-                'status'=>false,'message'=>'Commande introuvable.'
-            ]);
-        }
-        if ($commande['status'] !== 'en_attente') {
-            return $this->response->setStatusCode(400)->setJSON([
-                'status'=>false,'message'=>'Seules les commandes en attente peuvent être annulées.'
-            ]);
+        if (!$commande || $commande['id_user'] !== $this->userId || $commande['status'] !== 'en_attente') {
+            return $this->response->setStatusCode(400)->setJSON(['status' => false, 'message' => 'Action impossible.']);
         }
         (new CommandeModel())->changerStatut($id, 'annulee');
-        return $this->response->setJSON(['status'=>true,'message'=>'Commande annulée.']);
+        return $this->response->setJSON(['status' => true, 'message' => 'Commande annulée.']);
     }
 }
- 

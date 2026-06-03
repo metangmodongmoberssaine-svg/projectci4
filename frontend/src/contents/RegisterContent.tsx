@@ -27,8 +27,24 @@ export default function RegisterContent() {
         setLoading(true);
         setError(null);
 
+        // --- FORMATAGE DU NUMÉRO DE TÉLÉPHONE (+237) ---
+        let rawPhone = formData.telephone.trim();
+        
+        // Si l'utilisateur a quand même écrit +237 ou 237, on le nettoie
+        if (rawPhone.startsWith('+237')) {
+            rawPhone = rawPhone.substring(4);
+        } else if (rawPhone.startsWith('237')) {
+            rawPhone = rawPhone.substring(3);
+        }
+        
+        // On concatène proprement l'indicatif requis
+        const formattedData: RegisterData = {
+            ...formData,
+            telephone: `+237${rawPhone}`
+        };
+
         try {
-            const response = await AuthService.register(formData);
+            const response = await AuthService.register(formattedData);
             if (response.status) {
                 navigate('/otp', { state: { email: formData.email } });
             }
@@ -88,11 +104,23 @@ export default function RegisterContent() {
                                         </div>
                                     </div>
 
+                                    {/* --- CHAMP TÉLÉPHONE MODIFIÉ AVEC INDICATIF VISUEL --- */}
                                     <div className="mb-3" data-aos="fade-up" data-aos-delay="400">
                                         <label className="form-label fw-bold small">TÉLÉPHONE</label>
                                         <div className="input-group">
-                                            <span className="input-group-text border-0 bg-light"><i className="bi bi-telephone text-muted"></i></span>
-                                            <input type="tel" name="telephone" className="form-control form-control-lg border-0 bg-light" onChange={handleChange} required style={{ fontSize: '0.9rem' }} />
+                                            <span className="input-group-text border-0 bg-light">
+                                                <i className="bi bi-telephone text-muted me-2"></i>
+                                                <strong style={{ color: 'var(--af-primary)', fontSize: '0.9rem' }}>+237</strong>
+                                            </span>
+                                            <input 
+                                                type="tel" 
+                                                name="telephone" 
+                                                placeholder="Ex: 6XXXXXXXX"
+                                                className="form-control form-control-lg border-0 bg-light" 
+                                                onChange={handleChange} 
+                                                required 
+                                                style={{ fontSize: '0.9rem', paddingLeft: '5px' }} 
+                                            />
                                         </div>
                                     </div>
 
